@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ERD: Core Payments Ledger (Section 2.1)</title>
+<style>
+  :root{
+    --bg:#06080c; --panel:#0d111a; --panel2:#0f1622; --line:#1f2a3a;
+    --ink:#e6e9ef; --muted:#9aa4b2; --muteder:#6c7689;
+    --accounts:#4d9bff; --ledger:#2fe3cf; --control:#ffb454;
+    --pk:#ffcf5a; --fk:#4d9bff; --uq:#2fe3cf;
+    --red:#ff5a4d;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    line-height:1.5;-webkit-font-smoothing:antialiased}
+  code,.mono{font-family:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+  .wrap{max-width:1040px;margin:0 auto;padding:40px 24px 80px}
+  header.top{border-bottom:1px solid var(--line);padding-bottom:24px;margin-bottom:28px}
+  .eyebrow{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--red);font-weight:700}
+  h1{font-size:28px;margin:10px 0 8px;font-weight:800;letter-spacing:-.01em}
+  .sub{color:var(--muted);font-size:15px;max-width:760px}
+  h2{font-size:20px;margin:44px 0 16px;font-weight:700;display:flex;align-items:center;gap:10px}
+  h2::before{content:"";width:10px;height:10px;border-radius:3px;background:var(--red)}
+  .legend{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+  .chip{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;color:var(--muted);
+    background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:5px 11px}
+  .dot{width:10px;height:10px;border-radius:50%}
+  .diagram{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:10px;overflow:auto}
+  .diagram svg{display:block;min-width:900px;width:100%;height:auto}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden;
+    border-top:3px solid var(--c,#888)}
+  .card h3{margin:0;padding:13px 16px 11px;font-size:15.5px;font-weight:700;display:flex;
+    justify-content:space-between;align-items:center;gap:8px;border-bottom:1px solid var(--line)}
+  .card h3 .role{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  td{padding:7px 16px;border-bottom:1px solid #131a26;vertical-align:top}
+  tr:last-child td{border-bottom:0}
+  .col{color:var(--ink);font-weight:600;white-space:nowrap}
+  .note{color:var(--muted);font-size:12px}
+  .badges{white-space:nowrap}
+  .b{display:inline-block;font-size:9.5px;font-weight:800;letter-spacing:.04em;
+    padding:2px 5px;border-radius:4px;margin-right:3px;vertical-align:middle}
+  .b.pk{background:rgba(255,207,90,.16);color:var(--pk);border:1px solid rgba(255,207,90,.4)}
+  .b.fk{background:rgba(77,155,255,.16);color:var(--fk);border:1px solid rgba(77,155,255,.4)}
+  .b.uq{background:rgba(47,227,207,.14);color:var(--uq);border:1px solid rgba(47,227,207,.4)}
+  .inv{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:14px}
+  .ic{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 18px}
+  .ic h4{margin:0 0 6px;font-size:14.5px;color:var(--red)}
+  .ic p{margin:0;font-size:13px;color:var(--muted)}
+  .ic code{color:#cfd8e3;background:#121a27;padding:1px 5px;border-radius:4px;font-size:12px}
+  .rel{width:100%;border-collapse:collapse;background:var(--panel);border:1px solid var(--line);
+    border-radius:12px;overflow:hidden;font-size:13.5px}
+  .rel th{text-align:left;padding:11px 16px;background:var(--panel2);color:var(--muted);
+    font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--line)}
+  .rel td{padding:10px 16px;border-bottom:1px solid #131a26}
+  .rel tr:last-child td{border-bottom:0}
+  .card-disc{color:var(--muted);font-size:13px;margin-top:14px}
+  footer{margin-top:50px;padding-top:20px;border-top:1px solid var(--line);color:var(--muteder);font-size:12.5px}
+  .e-title{font:700 15px -apple-system,"Segoe UI",sans-serif}
+  .e-role{font:11px -apple-system,"Segoe UI",sans-serif;fill:var(--muted)}
+  .e-field{font:500 11.5px "JetBrains Mono",ui-monospace,Menlo,monospace;fill:#c2ccd9}
+  .verb{font:600 12px -apple-system,"Segoe UI",sans-serif}
+  .card-n{font:700 11px "JetBrains Mono",ui-monospace,monospace;fill:var(--muteder)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div class="eyebrow">VietPay Assessment / Task 1 / Section 2.1</div>
+    <h1>Core Payments Ledger: Entity Relationship Diagram</h1>
+    <p class="sub">The entities reasoned through in Section 2.1, and only those: accounts and wallets,
+    the double-entry split of the transactions table into transactions and entries, and the
+    idempotency key.</p>
+    <div class="legend">
+      <span class="chip"><span class="dot" style="background:var(--accounts)"></span>Accounts</span>
+      <span class="chip"><span class="dot" style="background:var(--ledger)"></span>Ledger</span>
+      <span class="chip"><span class="dot" style="background:var(--control)"></span>Idempotency</span>
+    </div>
+  </header>
+
+  <h2>Diagram</h2>
+  <div class="diagram">
+    <svg viewBox="0 0 1020 450" role="img" aria-label="Entity relationship diagram of the Section 2.1 entities">
+
+      <!-- ===================== CONNECTORS ===================== -->
+      <g stroke="#46556b" stroke-width="1.6" fill="none">
+        <!-- account -> wallet -->
+        <line x1="150" y1="126" x2="150" y2="220"/>
+        <!-- transaction -> entry -->
+        <line x1="510" y1="126" x2="510" y2="200"/>
+        <!-- wallet -> entry -->
+        <line x1="260" y1="284" x2="400" y2="305"/>
+        <!-- idempotency_key -> transaction -->
+        <line x1="760" y1="95" x2="620" y2="88"/>
+      </g>
+
+      <!-- cardinality labels -->
+      <g class="card-n">
+        <text x="156" y="146">1</text>   <text x="156" y="214">N</text>
+        <text x="516" y="146">1</text>   <text x="486" y="194">2..N</text>
+        <text x="266" y="278">1</text>   <text x="384" y="320">N</text>
+        <text x="744" y="89">1</text>    <text x="626" y="82">0..1</text>
+      </g>
+      <!-- verb labels -->
+      <g>
+        <g><rect x="158" y="156" width="40" height="17" rx="4" fill="#0d131d"/>
+           <text class="verb" x="163" y="168" fill="var(--accounts)">owns</text></g>
+        <g><rect x="524" y="154" width="34" height="17" rx="4" fill="#0d131d"/>
+           <text class="verb" x="529" y="166" fill="var(--ledger)">has</text></g>
+        <g><rect x="288" y="272" width="84" height="17" rx="4" fill="#0d131d"/>
+           <text class="verb" x="293" y="284" fill="var(--ledger)">targeted by</text></g>
+        <g><rect x="650" y="84" width="60" height="17" rx="4" fill="#0d131d"/>
+           <text class="verb" x="655" y="96" fill="var(--control)">maps to</text></g>
+      </g>
+
+      <!-- ===================== ENTITY BOXES ===================== -->
+      <!-- account -->
+      <g>
+        <rect x="40" y="40" width="220" height="86" rx="11" fill="var(--panel2)" stroke="var(--accounts)" stroke-width="1.5"/>
+        <text class="e-title" x="54" y="65" fill="var(--accounts)">account</text>
+        <text class="e-role" x="54" y="82">owns wallets</text>
+        <line x1="52" y1="92" x2="248" y2="92" stroke="#22304a"/>
+        <text class="e-field" x="54" y="113">account_id  PK</text>
+      </g>
+      <!-- wallet -->
+      <g>
+        <rect x="40" y="220" width="220" height="128" rx="11" fill="var(--panel2)" stroke="var(--accounts)" stroke-width="1.5"/>
+        <text class="e-title" x="54" y="245" fill="var(--accounts)">wallet</text>
+        <text class="e-role" x="54" y="262">single-currency container</text>
+        <line x1="52" y1="272" x2="248" y2="272" stroke="#22304a"/>
+        <text class="e-field" x="54" y="291">wallet_id  PK</text>
+        <text class="e-field" x="54" y="308">account_id  FK</text>
+        <text class="e-field" x="54" y="325">currency</text>
+        <text class="e-field" x="54" y="342">kind: regular / holding</text>
+      </g>
+      <!-- transaction -->
+      <g>
+        <rect x="400" y="40" width="220" height="86" rx="11" fill="var(--panel2)" stroke="var(--ledger)" stroke-width="1.5"/>
+        <text class="e-title" x="414" y="65" fill="var(--ledger)">transaction</text>
+        <text class="e-role" x="414" y="82">groups balanced entries</text>
+        <line x1="412" y1="92" x2="608" y2="92" stroke="#1d3a39"/>
+        <text class="e-field" x="414" y="113">transaction_id  PK</text>
+      </g>
+      <!-- entry -->
+      <g>
+        <rect x="400" y="200" width="220" height="210" rx="11" fill="var(--panel2)" stroke="var(--ledger)" stroke-width="1.5"/>
+        <text class="e-title" x="414" y="225" fill="var(--ledger)">entry</text>
+        <text class="e-role" x="414" y="242">debit / credit line</text>
+        <line x1="412" y1="252" x2="608" y2="252" stroke="#1d3a39"/>
+        <text class="e-field" x="414" y="271">entry_id  PK</text>
+        <text class="e-field" x="414" y="288">transaction_id  FK</text>
+        <text class="e-field" x="414" y="305">wallet_id  FK</text>
+        <text class="e-field" x="414" y="322">type: DEBIT / CREDIT</text>
+        <text class="e-field" x="414" y="339">amount: + / -</text>
+        <text class="e-field" x="414" y="356">currency</text>
+        <text class="e-field" x="414" y="373">status: SETTLED</text>
+        <text class="e-field" x="414" y="390">created_at</text>
+      </g>
+      <!-- idempotency_key -->
+      <g>
+        <rect x="760" y="40" width="220" height="110" rx="11" fill="var(--panel2)" stroke="var(--control)" stroke-width="1.5"/>
+        <text class="e-title" x="774" y="65" fill="var(--control)">idempotency_key</text>
+        <text class="e-role" x="774" y="82">retry safety</text>
+        <line x1="772" y1="92" x2="968" y2="92" stroke="#3a2f17"/>
+        <text class="e-field" x="774" y="111">idempotency_key_id  PK</text>
+        <text class="e-field" x="774" y="128">key  UNIQUE</text>
+        <text class="e-field" x="774" y="145">transaction_id  FK</text>
+      </g>
+    </svg>
+  </div>
+  <p class="card-disc">Cardinality is shown as <code>min..max</code> at each end (for example
+  <code>2..N</code> means a transaction has at least two entries).</p>
+
+  <h2>Entities</h2>
+  <div class="grid">
+
+    <div class="card" style="--c:var(--accounts)">
+      <h3>account <span class="role">accounts</span></h3>
+      <table>
+        <tr><td class="col">account_id</td><td class="badges"><span class="b pk">PK</span></td><td class="note">owns wallets</td></tr>
+      </table>
+    </div>
+
+    <div class="card" style="--c:var(--accounts)">
+      <h3>wallet <span class="role">accounts</span></h3>
+      <table>
+        <tr><td class="col">wallet_id</td><td class="badges"><span class="b pk">PK</span></td><td></td></tr>
+        <tr><td class="col">account_id</td><td class="badges"><span class="b fk">FK</span></td><td class="note">to account</td></tr>
+        <tr><td class="col">currency</td><td></td><td class="note">attribute of the wallet</td></tr>
+        <tr><td class="col">kind</td><td></td><td class="note">regular or holding</td></tr>
+      </table>
+    </div>
+
+    <div class="card" style="--c:var(--ledger)">
+      <h3>transaction <span class="role">ledger</span></h3>
+      <table>
+        <tr><td class="col">transaction_id</td><td class="badges"><span class="b pk">PK</span></td><td class="note">grouping header for entries</td></tr>
+      </table>
+    </div>
+
+    <div class="card" style="--c:var(--ledger)">
+      <h3>entry <span class="role">ledger</span></h3>
+      <table>
+        <tr><td class="col">entry_id</td><td class="badges"><span class="b pk">PK</span></td><td></td></tr>
+        <tr><td class="col">transaction_id</td><td class="badges"><span class="b fk">FK</span></td><td class="note">to transaction</td></tr>
+        <tr><td class="col">wallet_id</td><td class="badges"><span class="b fk">FK</span></td><td class="note">target wallet</td></tr>
+        <tr><td class="col">type</td><td></td><td class="note">DEBIT or CREDIT</td></tr>
+        <tr><td class="col">amount</td><td></td><td class="note">signed: + for CREDIT, - for DEBIT</td></tr>
+        <tr><td class="col">currency</td><td></td><td></td></tr>
+        <tr><td class="col">status</td><td></td><td class="note">SETTLED</td></tr>
+        <tr><td class="col">created_at</td><td></td><td></td></tr>
+      </table>
+    </div>
+
+    <div class="card" style="--c:var(--control)">
+      <h3>idempotency_key <span class="role">control</span></h3>
+      <table>
+        <tr><td class="col">idempotency_key_id</td><td class="badges"><span class="b pk">PK</span></td><td></td></tr>
+        <tr><td class="col">key</td><td class="badges"><span class="b uq">UQ</span></td><td class="note">duplicate is rejected</td></tr>
+        <tr><td class="col">transaction_id</td><td class="badges"><span class="b fk">FK</span></td><td class="note">the successful transaction</td></tr>
+      </table>
+    </div>
+
+  </div>
+
+  <h2>Relationships</h2>
+  <table class="rel">
+    <tr><th>From</th><th>To</th><th>Cardinality</th><th>Meaning</th></tr>
+    <tr><td class="mono">account</td><td class="mono">wallet</td><td class="mono">1 : N</td><td>an account owns many wallets (one per currency, plus holding)</td></tr>
+    <tr><td class="mono">transaction</td><td class="mono">entry</td><td class="mono">1 : 2..N</td><td>a transaction has two or more entries that balance</td></tr>
+    <tr><td class="mono">wallet</td><td class="mono">entry</td><td class="mono">1 : N</td><td>a wallet is targeted by many entries</td></tr>
+    <tr><td class="mono">idempotency_key</td><td class="mono">transaction</td><td class="mono">1 : 0..1</td><td>a request maps to at most one transaction</td></tr>
+  </table>
+
+  <h2>Integrity rules from the reasoning</h2>
+  <div class="inv">
+    <div class="ic"><h4>Zero-sum</h4>
+      <p>Each transaction's entries sum to zero (one <code>CREDIT +amount</code>, one
+      <code>DEBIT -amount</code>, or more for FX). Enforced by a trigger or a check inside the DB
+      transaction; a transaction that fails is rolled back.</p></div>
+    <div class="ic"><h4>Idempotency</h4>
+      <p>The idempotency <code>key</code> is unique. A retried or duplicated request is rejected and
+      mapped to the original transaction.</p></div>
+  </div>
+
+  <footer>
+    Kept to Section 2.1. FX is handled by multiple currency-pure wallets plus house exchange wallets
+    (A1_VND, FX_VND, FX_USD, A2_USD), so it needs no extra entity. Holding wallets are ordinary wallets
+    with a kind. Audit is handled at the application level and offloaded to MongoDB or another store, a
+    separate section, so it is not a table here.
+  </footer>
+
+</div>
+</body>
+</html>

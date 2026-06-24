@@ -90,3 +90,63 @@ Our analysis can cover most of the ADR here, but the task requires some more tho
 ### 1.3. Journal audit / feedback
 
 The audit shows my lack of knowledge of PostgreSQL. This is good, it gives me a pointer on how to address my gap here. Most of the clarification is for things I already know or awareness of what I lack. Some of it is kind of a misunderstanding because my thought wording is not clear enough, not that I do not know about that part, but I kind of forgot to include it in the thought. It's good to know how to clarify the thought. The final part is what the AI already assumes, like settlement; I will ignore this because of my lack of domain knowledge and stick to the technical aspect of the task. Lack of knowledge is not a bad thing; relying on AI for what I don't know is bad.
+
+## 2. Core design
+
+### 2.1 Entities
+
+#### Explore and reasoning
+
+We start with the `transactions` table as the starting point:
+
+```
+transactions(id, wallet_id, type, amount, currency, status, created_at)
+```
+
+A **transaction** targets a **wallet**, has attributes: _type_ (`DEBIT`, `CREDIT`), _amount_, _currency_, _status_ (`SETTLED`), _created\_at_.
+But this transaction is not a real double-ledger transaction because it's double entries. So this **transaction** should be an **entry** in our model. So we expand the above **transaction** into 2 entities: **transaction** and **entry**. Each **transaction** has 2 **entries**, 1 `CREDIT` (+amount) and 1 `DEBIT` (-amount) that have a total sum of 0.
+
+```
+[Transaction] ------- [Entry (CREDIT +)] --- [Wallet]
+                 |--- [Entry (DEBIT  -)] --- [Wallet]
+```
+
+To enforce the zero-sum requirement of the double-entry ledger, we can have a trigger that checks for mismatch of newly added entries, or simply just query and check within a transaction. Any DB transaction that failed the check must be ROLLBACK. Only a zero-sum transaction will COMMIT, so that our business requirement will be ensured. The DB transaction also covers other business requirements like sufficient balance, whitelist, blacklist, etc.
+
+From an **entry** point of view, the value of a **transaction** must be fixed and tied with the _currency_. In the case of a transaction between a VND wallet (A1) and a USD wallet (A2), the value is dependent on the exchange rate VND/USD and subject to changes. So we must derive a way to solve this. There are 2 solutions:
+ - (1) decide a base currency and convert all transaction value into the base currency. This solution works well in a customer assets system but not in our case of a payment platform.
+ - (2) create multiple wallets that stay true to their currency. In this case, the above example will have to include at least 4 wallets: A1_VND, FX_VND (house exchange wallet), FX_USD, A2_USD. The transaction then has 4 entries: (E1/2) transfer VND amount from A1_VND to FX_VND, (E3/4) transfer USD amount from FX_USD to A2_USD. This way the zero-sum requirement will be kept.
+
+I will go with option (2), so we have multiple **wallets** that a **transaction** with appropriate currency will target and an **account** will have multiple **wallets** that serve for multiple currencies. We also can use this pattern to have holding wallets, which are for transfers that are being processed by external processes.
+
+```
+[Account] ------- [Wallet (USD)]
+             |--- [Wallet Holding (USD)]
+             |--- [Wallet (VND)]
+             |--- [Wallet Holding (VND)]
+```
+
+For idempotent keys, the point of having them is to prevent duplication handling of a transaction, which means it always guarantees that a transaction request is only handled once. If a service accidentally retries or sends the same transaction request, the transaction is not duplicated. We can integrate this by having the **idempotency_key** entity that tracks the unique idempotency key, by enforcing unique on the key, we reject those requests that have an idempotency key already registered in the entity, and also map the request with the successful transaction. The idempotent key registration will be included in the DB transaction, so only a successful DB transaction will commit and the idempotent key will exist after COMMIT.
+
+```
+[Idempotency Key] ------ [Transaction]
+```
+
+For audit logging, I personally don't want to use a trigger for auditing because it will duplicate the load on our main database, and we don't have information in case of ROLLBACK because the trigger will handle inside the transaction and being rolled back too. So I will let the application handle the audit log, which sends the log with request idempotent key, transaction id, and if the DB rolls back, we still have information about that too. We can then offload the audit to an appropriate DBMS like MongoDB or just another PostgreSQL instance. There might be DBMS level that record audit, we need to have research on this.
+
+After research, it seems like we don't have a clear answer on the compliance aspect, so we will introduce both trigger audit and external audit as a separate section for our final delivery. And as AI suggests in research, audit is not just recording transactions, it's for all other modifications on all of our entities.
+
+There are some edge cases that I am thinking about:
+- External process that holds the transaction in between state. This is where the holding wallet comes from, but the more I think about it, the more unclear it becomes to be integrated into our core system. This problem needs a more thorough analysis so I will skip them, there is no time. We just accept that the higher level transaction will be managed elsewhere, then if that transaction is invalid and needs to roll back, we add a new transaction to move money from holding back to the original wallet.
+
+
+#### Final ERD
+
+I will use AI to draw ERD for me based on above reasoning.
+
+The ERD lives in two forms:
+
+- [`docs/ERD.md`](./docs/ERD.md) - Mermaid diagram, entity tables, and the integrity rules from this reasoning (renders on GitHub).
+- [`docs/ERD.html`](./docs/ERD.html) - standalone, offline visual artifact (open in a browser).
+
+It draws exactly the entities reasoned through above: account, wallet (including holding wallets), transaction, entry, and idempotency key, plus the zero-sum and idempotency rules. FX uses multiple currency-pure wallets and house exchange wallets, and audit stays at the application/MongoDB level, so neither adds an entity here.
