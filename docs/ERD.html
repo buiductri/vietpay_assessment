@@ -3,14 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ERD: Core Payments Ledger (expanded)</title>
+<title>ERD: Core Payments Ledger (expanded + audited)</title>
 <style>
   :root{
     --bg:#06080c; --panel:#0d111a; --panel2:#0f1622; --line:#1f2a3a;
     --ink:#e6e9ef; --muted:#9aa4b2; --muteder:#6c7689;
-    --accounts:#4d9bff; --ledger:#2fe3cf; --control:#ffb454; --fx:#5ad17a;
+    --accounts:#4d9bff; --ledger:#2fe3cf; --control:#ffb454; --fx:#5ad17a; --audit:#b388ff;
     --pk:#ffcf5a; --fk:#4d9bff; --uq:#2fe3cf; --nn:#8b97a8;
-    --red:#ff5a4d;
+    --red:#ff5a4d; --ai:#ff5ea8;
   }
   *{box-sizing:border-box}
   html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);
@@ -28,6 +28,8 @@
   .chip{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;color:var(--muted);
     background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:5px 11px}
   .dot{width:10px;height:10px;border-radius:50%}
+  .ainote{margin-top:12px;font-size:12.5px;color:var(--muted)}
+  .ainote b{color:var(--ai)}
   /* diagram */
   .diagram{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:10px;overflow:auto}
   .diagram svg{display:block;min-width:980px;width:100%;height:auto}
@@ -38,6 +40,8 @@
   .card h3{margin:0;padding:13px 16px 11px;font-size:15.5px;font-weight:700;display:flex;
     justify-content:space-between;align-items:center;gap:8px;border-bottom:1px solid var(--line)}
   .card h3 .role{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+  .card h3 .ai{font-size:10px;font-weight:800;color:var(--ai);border:1px solid var(--ai);
+    border-radius:4px;padding:1px 5px;letter-spacing:.03em}
   table{width:100%;border-collapse:collapse;font-size:13px}
   td{padding:7px 16px;border-bottom:1px solid #131a26;vertical-align:top}
   tr:last-child td{border-bottom:0}
@@ -50,10 +54,14 @@
   .b.pk{background:rgba(255,207,90,.16);color:var(--pk);border:1px solid rgba(255,207,90,.4)}
   .b.fk{background:rgba(77,155,255,.16);color:var(--fk);border:1px solid rgba(77,155,255,.4)}
   .b.uq{background:rgba(47,227,207,.14);color:var(--uq);border:1px solid rgba(47,227,207,.4)}
+  .b.aiadd{background:var(--ai);color:#180810;border:1px solid var(--ai)}
+  .b.airev{background:transparent;color:var(--ai);border:1px solid var(--ai)}
   /* rules */
   .inv{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:14px}
   .ic{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 18px}
-  .ic h4{margin:0 0 6px;font-size:14.5px;color:var(--red)}
+  .ic h4{margin:0 0 6px;font-size:14.5px;color:var(--red);display:flex;align-items:center;gap:8px}
+  .ic h4 .ai{font-size:10px;font-weight:800;color:var(--ai);border:1px solid var(--ai);
+    border-radius:4px;padding:1px 5px;letter-spacing:.03em}
   .ic p{margin:0;font-size:13px;color:var(--muted)}
   .ic code{color:#cfd8e3;background:#121a27;padding:1px 5px;border-radius:4px;font-size:12px}
   /* rel table */
@@ -64,6 +72,17 @@
   .rel td{padding:10px 16px;border-bottom:1px solid #131a26}
   .rel tr:last-child td{border-bottom:0}
   .card-disc{color:var(--muted);font-size:13px;margin-top:14px}
+  /* worked example */
+  .ex{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin-top:4px}
+  .ex h4{margin:0 0 6px;font-size:14.5px;color:var(--fx);display:flex;align-items:center;gap:8px}
+  .ex h4 .ai{font-size:10px;font-weight:800;color:var(--ai);border:1px solid var(--ai);
+    border-radius:4px;padding:1px 5px;letter-spacing:.03em}
+  .ex p{margin:0 0 12px;font-size:13px;color:var(--muted)}
+  .ex code{color:#cfd8e3;background:#121a27;padding:1px 5px;border-radius:4px;font-size:12px}
+  .ex table{font-size:13px}
+  .ex th{text-align:left;padding:7px 14px;background:var(--panel2);color:var(--muted);font-size:11.5px;
+    text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--line)}
+  .ex td{padding:7px 14px}
   footer{margin-top:50px;padding-top:20px;border-top:1px solid var(--line);color:var(--muteder);font-size:12.5px}
   /* svg text helpers */
   .e-title{font:700 15px -apple-system,"Segoe UI",sans-serif}
@@ -71,29 +90,37 @@
   .e-field{font:500 11.5px "JetBrains Mono",ui-monospace,Menlo,monospace;fill:#c2ccd9}
   .verb{font:600 12px -apple-system,"Segoe UI",sans-serif}
   .card-n{font:700 11px "JetBrains Mono",ui-monospace,monospace;fill:var(--muteder)}
+  .ai-tag{font:800 10px "JetBrains Mono",ui-monospace,monospace;fill:var(--ai)}
 </style>
 </head>
 <body>
 <div class="wrap">
 
   <header class="top">
-    <div class="eyebrow">VietPay Assessment / Task 1 / Section 2.1 (expanded)</div>
+    <div class="eyebrow">VietPay Assessment / Task 1 / Section 2.1 (expanded + audited)</div>
     <h1>Core Payments Ledger: Entity Relationship Diagram</h1>
-    <p class="sub">The Section 2.1 entities expanded with the business attributes and data types from the
-    journal subsection "Expand the base ERD to have more information": named columns, the money/id type
-    rules, and the <code>exchange_rate</code> and <code>currency</code> lookups. Further fields and
-    structural corrections are deferred.</p>
+    <p class="sub">The Section 2.1 entities, expanded and audited item by item against the fintech research
+    and the assessment task. This adds the Layer 2 <code>audit_log</code>, the chart of accounts, the
+    per-currency balance rule, immutability and currency-consistency guarantees, idempotency scoping, and
+    the FX worked example. The full changelog (with every original value preserved) is in
+    <code>../00-journal.md</code>, "ERD AI expansion and auditing".</p>
     <div class="legend">
       <span class="chip"><span class="dot" style="background:var(--accounts)"></span>Accounts domain</span>
       <span class="chip"><span class="dot" style="background:var(--ledger)"></span>Ledger domain</span>
       <span class="chip"><span class="dot" style="background:var(--control)"></span>Control (idempotency)</span>
       <span class="chip"><span class="dot" style="background:var(--fx)"></span>FX / currency</span>
+      <span class="chip"><span class="dot" style="background:var(--audit)"></span>Audit (Layer 2)</span>
+      <span class="chip"><span class="dot" style="background:var(--ai)"></span>AI contribution</span>
     </div>
+    <p class="ainote">AI contributions are marked <b>AI+</b> (AI-added) and <b>AI~</b> (AI-revised). The
+    original value of every revision and its rationale are kept in the journal changelog; human-reasoned
+    decisions are recorded there as attributed feedback. Unmarked content is the author's Section 2.1 work
+    (the <code>exchange_rate_id</code> rename was a typo fix, so it carries no AI mark).</p>
   </header>
 
   <h2>Diagram</h2>
   <div class="diagram">
-    <svg viewBox="0 0 1020 540" role="img" aria-label="Entity relationship diagram of the expanded core payments ledger">
+    <svg viewBox="0 0 1020 560" role="img" aria-label="Entity relationship diagram of the expanded core payments ledger">
 
       <!-- ===================== CONNECTORS (drawn first, under boxes) ===================== -->
       <g stroke="#46556b" stroke-width="1.6" fill="none">
@@ -140,10 +167,10 @@
       <g>
         <rect x="40" y="40" width="220" height="120" rx="11" fill="var(--panel2)" stroke="var(--accounts)" stroke-width="1.5"/>
         <text class="e-title" x="54" y="65" fill="var(--accounts)">account</text>
-        <text class="e-role" x="54" y="82">party that owns wallets</text>
+        <text class="e-role" x="54" y="82">chart-of-accounts bucket</text>
         <line x1="52" y1="92" x2="248" y2="92" stroke="#22304a"/>
         <text class="e-field" x="54" y="111">account_id  PK</text>
-        <text class="e-field" x="54" y="128">type: customer / system</text>
+        <text class="e-field" x="54" y="128">type: CUSTOMER / PLATFORM_*</text>
         <text class="e-field" x="54" y="145">name, status</text>
       </g>
       <!-- wallet -->
@@ -154,7 +181,7 @@
         <line x1="52" y1="262" x2="248" y2="262" stroke="#22304a"/>
         <text class="e-field" x="54" y="281">wallet_id  PK</text>
         <text class="e-field" x="54" y="298">account_id  FK</text>
-        <text class="e-field" x="54" y="315">balance: derived</text>
+        <text class="e-field" x="54" y="315">currency, kind, balance</text>
       </g>
       <!-- transaction -->
       <g>
@@ -164,17 +191,28 @@
         <line x1="412" y1="92" x2="608" y2="92" stroke="#1d3a39"/>
         <text class="e-field" x="414" y="111">transaction_id  PK</text>
         <text class="e-field" x="414" y="128">type / status</text>
-        <text class="e-field" x="414" y="145">exchange_id  FK</text>
+        <text class="e-field" x="414" y="145">exchange_rate_id  FK</text>
       </g>
       <!-- entry -->
       <g>
         <rect x="400" y="210" width="220" height="120" rx="11" fill="var(--panel2)" stroke="var(--ledger)" stroke-width="1.5"/>
         <text class="e-title" x="414" y="235" fill="var(--ledger)">entry</text>
-        <text class="e-role" x="414" y="252">debit / credit line</text>
+        <text class="e-role" x="414" y="252">debit / credit line (immutable)</text>
         <line x1="412" y1="262" x2="608" y2="262" stroke="#1d3a39"/>
         <text class="e-field" x="414" y="281">entry_id  PK</text>
         <text class="e-field" x="414" y="298">transaction_id, wallet_id  FK</text>
-        <text class="e-field" x="414" y="315">amount: numeric(19,4)</text>
+        <text class="e-field" x="414" y="315">amount &gt; 0, currency = wallet</text>
+      </g>
+      <!-- audit_log -->
+      <g>
+        <rect x="400" y="380" width="220" height="120" rx="11" fill="var(--panel2)" stroke="var(--audit)" stroke-width="1.5"/>
+        <text class="e-title" x="414" y="405" fill="var(--audit)">audit_log</text>
+        <text class="ai-tag" x="566" y="405">AI+</text>
+        <text class="e-role" x="414" y="422">audits all entities (Layer 2)</text>
+        <line x1="412" y1="432" x2="608" y2="432" stroke="#322a4a"/>
+        <text class="e-field" x="414" y="451">audit_log_id  PK</text>
+        <text class="e-field" x="414" y="468">entity_type, entity_id, action</text>
+        <text class="e-field" x="414" y="485">actor, transaction_id  FK</text>
       </g>
       <!-- idempotency_key -->
       <g>
@@ -183,8 +221,8 @@
         <text class="e-role" x="774" y="82">retry-safety control</text>
         <line x1="772" y1="92" x2="968" y2="92" stroke="#3a2f17"/>
         <text class="e-field" x="774" y="111">idempotency_key_id  PK</text>
-        <text class="e-field" x="774" y="128">key  UNIQUE</text>
-        <text class="e-field" x="774" y="145">caller_id, request_id</text>
+        <text class="e-field" x="774" y="128">key  UNIQUE (caller_id, key)</text>
+        <text class="e-field" x="774" y="145">expires_at, transaction_id</text>
       </g>
       <!-- exchange_rate -->
       <g>
@@ -194,7 +232,7 @@
         <line x1="772" y1="262" x2="968" y2="262" stroke="#21381f"/>
         <text class="e-field" x="774" y="281">exchange_rate_id  PK</text>
         <text class="e-field" x="774" y="298">exchange_date</text>
-        <text class="e-field" x="774" y="315">rate</text>
+        <text class="e-field" x="774" y="315">base, quote, rate</text>
       </g>
       <!-- currency -->
       <g>
@@ -210,7 +248,8 @@
   </div>
   <p class="card-disc">Each box shows a few key fields; the full column list is in the cards below.
   Cardinality is shown as <code>min..max</code> at each end (for example <code>2..N</code> means a
-  transaction has at least two entries).</p>
+  transaction has at least two entries). The <span style="color:var(--audit)">audit_log</span> entity
+  (AI-added) audits all entities polymorphically, so it is shown <b>detached</b>, with no relationship lines.</p>
 
   <h2>Entities</h2>
   <div class="grid">
@@ -218,9 +257,9 @@
     <div class="card" style="--c:var(--accounts)">
       <h3>account <span class="role">accounts</span></h3>
       <table>
-        <tr><td class="col">account_id</td><td class="typ">uuid</td><td class="badges"><span class="b pk">PK</span></td></tr>
+        <tr><td class="col">account_id</td><td class="typ">uuid</td><td class="badges"><span class="b pk">PK</span></td><td></td></tr>
         <tr><td class="col">name</td><td class="typ">text</td><td></td><td></td></tr>
-        <tr><td class="col">type</td><td class="typ">text</td><td></td><td class="note">customer / system</td></tr>
+        <tr><td class="col">type</td><td class="typ">text</td><td class="badges"><span class="b airev">AI~</span></td><td class="note">chart of accounts: CUSTOMER, PLATFORM_FLOAT, PLATFORM_REVENUE, MERCHANT_PAYABLE, FX_POSITION</td></tr>
         <tr><td class="col">status</td><td class="typ">text</td><td></td><td class="note">active / closed</td></tr>
       </table>
     </div>
@@ -228,11 +267,11 @@
     <div class="card" style="--c:var(--accounts)">
       <h3>wallet <span class="role">accounts</span></h3>
       <table>
-        <tr><td class="col">wallet_id</td><td class="typ">uuid</td><td class="badges"><span class="b pk">PK</span></td></tr>
+        <tr><td class="col">wallet_id</td><td class="typ">uuid</td><td class="badges"><span class="b pk">PK</span></td><td></td></tr>
         <tr><td class="col">account_id</td><td class="typ">uuid</td><td class="badges"><span class="b fk">FK</span></td><td class="note">to account</td></tr>
         <tr><td class="col">name</td><td class="typ">text</td><td></td><td></td></tr>
-        <tr><td class="col">currency</td><td class="typ">char(3)</td><td></td><td class="note">ISO 4217; attribute of the wallet</td></tr>
-        <tr><td class="col">kind</td><td class="typ">text</td><td></td><td class="note">regular / holding</td></tr>
+        <tr><td class="col">currency</td><td class="typ">char(3)</td><td class="badges"><span class="b uq">UQ</span><span class="b aiadd">AI+</span></td><td class="note">ISO 4217; <code>UNIQUE (wallet_id, currency)</code> is the entry FK target</td></tr>
+        <tr><td class="col">kind</td><td class="typ">text</td><td class="badges"><span class="b airev">AI~</span></td><td class="note">regular (spendable) / holding (held while an external flow settles)</td></tr>
         <tr><td class="col">balance</td><td class="typ">numeric(19,4)</td><td></td><td class="note">derived; never source of truth</td></tr>
         <tr><td class="col">status</td><td class="typ">text</td><td></td><td class="note">active / closed</td></tr>
       </table>
@@ -241,12 +280,12 @@
     <div class="card" style="--c:var(--ledger)">
       <h3>transaction <span class="role">ledger</span></h3>
       <table>
-        <tr><td class="col">transaction_id</td><td class="typ">uuid</td><td class="badges"><span class="b pk">PK</span></td></tr>
+        <tr><td class="col">transaction_id</td><td class="typ">uuid</td><td class="badges"><span class="b pk">PK</span></td><td></td></tr>
         <tr><td class="col">type</td><td class="typ">text</td><td></td><td class="note">transfer / exchange / fee ...</td></tr>
-        <tr><td class="col">status</td><td class="typ">text</td><td></td><td class="note">running / pending / completed ...</td></tr>
-        <tr><td class="col">exchange_id</td><td class="typ">uuid</td><td class="badges"><span class="b fk">FK</span></td><td class="note">to exchange_rate; exchange only, nullable</td></tr>
+        <tr><td class="col">status</td><td class="typ">text</td><td class="badges"><span class="b airev">AI~</span></td><td class="note">PENDING / SETTLED / REVERSED</td></tr>
+        <tr><td class="col">exchange_rate_id</td><td class="typ">uuid</td><td class="badges"><span class="b fk">FK</span></td><td class="note">exact point-in-time rate record (immutable, so the rate is pinned); exchange only, nullable</td></tr>
         <tr><td class="col">description</td><td class="typ">text</td><td></td><td></td></tr>
-        <tr><td class="col">extra_info</td><td class="typ">jsonb</td><td></td><td class="note">fees, exchange detail, etc.</td></tr>
+        <tr><td class="col">extra_info</td><td class="typ">jsonb</td><td></td><td class="note">fees, exchange value, multi-currency legs ...</td></tr>
         <tr><td class="col">created_at</td><td class="typ">timestamptz</td><td></td><td class="note">commit time</td></tr>
       </table>
     </div>
@@ -254,13 +293,12 @@
     <div class="card" style="--c:var(--ledger)">
       <h3>entry <span class="role">ledger</span></h3>
       <table>
-        <tr><td class="col">entry_id</td><td class="typ">uuid</td><td class="badges"><span class="b pk">PK</span></td></tr>
+        <tr><td class="col">entry_id</td><td class="typ">uuid</td><td class="badges"><span class="b pk">PK</span></td><td class="note">logical PK; physical PK is <code>(entry_id, created_at)</code> when partitioned <span class="b aiadd">AI+</span></td></tr>
         <tr><td class="col">transaction_id</td><td class="typ">uuid</td><td class="badges"><span class="b fk">FK</span></td><td class="note">to transaction</td></tr>
         <tr><td class="col">wallet_id</td><td class="typ">uuid</td><td class="badges"><span class="b fk">FK</span></td><td class="note">target wallet</td></tr>
         <tr><td class="col">type</td><td class="typ">text</td><td></td><td class="note">DEBIT or CREDIT</td></tr>
-        <tr><td class="col">amount</td><td class="typ">numeric(19,4)</td><td></td><td class="note">signed: + for CREDIT, - for DEBIT</td></tr>
-        <tr><td class="col">currency</td><td class="typ">char(3)</td><td></td><td></td></tr>
-        <tr><td class="col">status</td><td class="typ">text</td><td></td><td class="note">SETTLED</td></tr>
+        <tr><td class="col">amount</td><td class="typ">numeric(19,4)</td><td class="badges"><span class="b airev">AI~</span></td><td class="note">positive magnitude; direction is in <code>type</code>; <code>CHECK (amount &gt; 0)</code></td></tr>
+        <tr><td class="col">currency</td><td class="typ">char(3)</td><td class="badges"><span class="b fk">FK</span><span class="b aiadd">AI+</span></td><td class="note">must equal the wallet's; composite FK <code>(wallet_id, currency)</code> -&gt; wallet, both NOT NULL</td></tr>
         <tr><td class="col">created_at</td><td class="typ">timestamptz</td><td></td><td></td></tr>
       </table>
     </div>
@@ -268,18 +306,19 @@
     <div class="card" style="--c:var(--control)">
       <h3>idempotency_key <span class="role">control</span></h3>
       <table>
-        <tr><td class="col">idempotency_key_id</td><td class="typ">uuid</td><td class="badges"><span class="b pk">PK</span></td></tr>
-        <tr><td class="col">key</td><td class="typ">text</td><td class="badges"><span class="b uq">UQ</span></td><td class="note">duplicate is rejected</td></tr>
-        <tr><td class="col">caller_id</td><td class="typ">text</td><td></td><td class="note">request initiator (customer/system account)</td></tr>
+        <tr><td class="col">idempotency_key_id</td><td class="typ">uuid</td><td class="badges"><span class="b pk">PK</span></td><td></td></tr>
+        <tr><td class="col">key</td><td class="typ">text</td><td class="badges"><span class="b uq">UQ</span><span class="b airev">AI~</span></td><td class="note">unique per caller: <code>UNIQUE (caller_id, key)</code>; a duplicate is rejected</td></tr>
+        <tr><td class="col">caller_id</td><td class="typ">text</td><td></td><td class="note">request initiator; part of the unique key</td></tr>
         <tr><td class="col">request_id</td><td class="typ">text</td><td></td><td class="note">API request id, distinct from the key</td></tr>
         <tr><td class="col">transaction_id</td><td class="typ">uuid</td><td class="badges"><span class="b fk">FK</span></td><td class="note">the successful transaction</td></tr>
+        <tr><td class="col">expires_at</td><td class="typ">timestamptz</td><td class="badges"><span class="b aiadd">AI+</span></td><td class="note">retention window; a cleanup/watchdog job sweeps expired keys (operational, not correctness)</td></tr>
       </table>
     </div>
 
     <div class="card" style="--c:var(--fx)">
       <h3>exchange_rate <span class="role">fx / lookup</span></h3>
       <table>
-        <tr><td class="col">exchange_rate_id</td><td class="typ">uuid</td><td class="badges"><span class="b pk">PK</span></td></tr>
+        <tr><td class="col">exchange_rate_id</td><td class="typ">uuid</td><td class="badges"><span class="b pk">PK</span></td><td></td></tr>
         <tr><td class="col">exchange_date</td><td class="typ">date</td><td></td><td class="note">date the rate applies to</td></tr>
         <tr><td class="col">base_currency_id</td><td class="typ">uuid</td><td class="badges"><span class="b fk">FK</span></td><td class="note">to currency (base)</td></tr>
         <tr><td class="col">currency_id</td><td class="typ">uuid</td><td class="badges"><span class="b fk">FK</span></td><td class="note">to currency (quoted)</td></tr>
@@ -290,48 +329,108 @@
     <div class="card" style="--c:var(--fx)">
       <h3>currency <span class="role">fx / lookup</span></h3>
       <table>
-        <tr><td class="col">currency_id</td><td class="typ">uuid</td><td class="badges"><span class="b pk">PK</span></td></tr>
+        <tr><td class="col">currency_id</td><td class="typ">uuid</td><td class="badges"><span class="b pk">PK</span></td><td></td></tr>
         <tr><td class="col">name</td><td class="typ">text</td><td></td><td class="note">e.g. US Dollar</td></tr>
         <tr><td class="col">code</td><td class="typ">char(3)</td><td></td><td class="note">ISO 4217, e.g. USD</td></tr>
       </table>
     </div>
 
+    <div class="card" style="--c:var(--audit)">
+      <h3>audit_log <span class="ai">AI+</span></h3>
+      <table>
+        <tr><td class="col">audit_log_id</td><td class="typ">uuid</td><td class="badges"><span class="b pk">PK</span></td><td></td></tr>
+        <tr><td class="col">entity_type</td><td class="typ">text</td><td></td><td class="note">wallet, account, transaction ...</td></tr>
+        <tr><td class="col">entity_id</td><td class="typ">uuid</td><td></td><td class="note">changed row; polymorphic, so not a FK</td></tr>
+        <tr><td class="col">action</td><td class="typ">text</td><td></td><td class="note">CREATED, STATUS_CHANGED, FROZEN ...</td></tr>
+        <tr><td class="col">old_state / new_state</td><td class="typ">jsonb</td><td></td><td class="note">null on create</td></tr>
+        <tr><td class="col">reason</td><td class="typ">text</td><td></td><td class="note">ops_manual_review, bank_declined ...</td></tr>
+        <tr><td class="col">actor_id / actor_type</td><td class="typ">uuid / text</td><td></td><td class="note">who caused it: ACCOUNT / SERVICE / OPS_USER</td></tr>
+        <tr><td class="col">transaction_id</td><td class="typ">uuid</td><td class="badges"><span class="b fk">FK</span></td><td class="note">optional operation pointer, nullable; not drawn as a relationship</td></tr>
+        <tr><td class="col">request_id</td><td class="typ">uuid</td><td></td><td class="note">trace to the Layer 3 activity event</td></tr>
+        <tr><td class="col">created_at</td><td class="typ">timestamptz</td><td></td><td></td></tr>
+      </table>
+    </div>
+
   </div>
+
+  <p class="card-disc">Layer 1 of the audit model is the immutable <code>entry</code> rows themselves; Layer 2
+  is <code>audit_log</code> above (committed non-ledger state changes); Layer 3 (attempts, denials, access)
+  is an append-only MongoDB event log in a separate file, so it is not a table here.</p>
 
   <h2>Relationships</h2>
   <table class="rel">
     <tr><th>From</th><th>To</th><th>Cardinality</th><th>Meaning</th></tr>
     <tr><td class="mono">account</td><td class="mono">wallet</td><td class="mono">1 : N</td><td>an account owns many wallets (one per currency, plus holding)</td></tr>
     <tr><td class="mono">transaction</td><td class="mono">entry</td><td class="mono">1 : 2..N</td><td>a transaction has two or more entries that balance</td></tr>
-    <tr><td class="mono">wallet</td><td class="mono">entry</td><td class="mono">1 : N</td><td>a wallet is targeted by many entries</td></tr>
+    <tr><td class="mono">wallet</td><td class="mono">entry</td><td class="mono">1 : N</td><td>a wallet is targeted by many entries; the link is a composite <code>(wallet_id, currency)</code> FK, so an entry's currency must match its wallet's</td></tr>
     <tr><td class="mono">idempotency_key</td><td class="mono">transaction</td><td class="mono">1 : 0..1</td><td>a request maps to at most one transaction</td></tr>
     <tr><td class="mono">exchange_rate</td><td class="mono">transaction</td><td class="mono">1 : 0..N</td><td>an exchange transaction references one captured rate; non-exchange transactions reference none</td></tr>
     <tr><td class="mono">currency</td><td class="mono">exchange_rate</td><td class="mono">1 : 0..N</td><td>each rate names one base and one quoted currency from the lookup</td></tr>
   </table>
+  <p class="card-disc"><span style="color:var(--audit)">audit_log</span> is intentionally absent from
+  this table: it audits all entities through the polymorphic <code>(entity_type, entity_id)</code> pair,
+  which is not a drawable foreign key, so it is shown detached. <span class="b aiadd">AI+</span></p>
 
   <h2>Integrity rules from the reasoning</h2>
   <div class="inv">
-    <div class="ic"><h4>Zero-sum</h4>
-      <p>Each transaction's entries sum to zero (one <code>CREDIT +amount</code>, one
-      <code>DEBIT -amount</code>, or more for FX). Enforced by a trigger or a check inside the DB
-      transaction; a transaction that fails is rolled back.</p></div>
+    <div class="ic"><h4>Zero-sum, per currency <span class="ai">AI~</span></h4>
+      <p>Within each currency of a transaction, <code>SUM(amount WHERE type=DEBIT) = SUM(amount WHERE
+      type=CREDIT)</code>. A cross-currency transfer is two balanced pairs (one per currency) bridged by the
+      FX rate, which never enters the check. Grouping by currency matters because a currency-blind total can
+      net to balanced while individual currencies are not, an imbalance in one currency can cross-cancel
+      another, and a global check would accept it.</p></div>
+    <div class="ic"><h4>Immutability <span class="ai">AI+</span></h4>
+      <p><code>entry</code> rows are append-only: <code>REVOKE UPDATE, DELETE</code> from the app role. A
+      posted entry is never edited or deleted; a transaction is undone only by posting a new reversing
+      transaction (<code>status = REVERSED</code>). Lifecycle lives on <code>transaction.status</code>, and
+      the entries themselves are the lifecycle audit.</p></div>
+    <div class="ic"><h4>Currency consistency <span class="ai">AI+</span></h4>
+      <p>An entry's currency must equal its wallet's. Enforced by construction: <code>wallet</code> carries
+      <code>UNIQUE (wallet_id, currency)</code> and <code>entry</code> has a composite FK
+      <code>(wallet_id, currency)</code> -&gt; <code>wallet</code>. Both entry columns are <code>NOT NULL</code>,
+      so the check is never skipped (a NULL would bypass a composite FK under the default
+      <code>MATCH SIMPLE</code>).</p></div>
     <div class="ic"><h4>Idempotency</h4>
-      <p>The idempotency <code>key</code> is unique. A retried or duplicated request is rejected and
-      mapped to the original transaction; <code>caller_id</code> and <code>request_id</code> give it
+      <p>The idempotency <code>key</code> is unique per caller. A retried or duplicated request is rejected
+      and mapped to the original transaction; <code>caller_id</code> and <code>request_id</code> give it
       traceability.</p></div>
     <div class="ic"><h4>Derived balance</h4>
-      <p><code>wallet.balance</code> is computed inside the transaction from the entries and is never
-      trusted as the source of truth; the entries are.</p></div>
+      <p><code>wallet.balance</code> is computed inside the transaction from the entries and is never trusted
+      as the source of truth; the entries are.</p></div>
+    <div class="ic"><h4>Reconciliation <span class="ai">AI+</span></h4>
+      <p>Because <code>wallet.balance</code> is a cache, a scheduled <code>balance_audit</code> compares it
+      against the authoritative <code>SUM(entries)</code> per wallet and alerts on any nonzero discrepancy.
+      Detailed checks and alerting are developed later (Task 5, observability).</p></div>
     <div class="ic"><h4>Money and ids</h4>
       <p>Money is <code>NUMERIC(19,4)</code> (no floating point); ids are <code>UUID</code>.</p></div>
   </div>
 
+  <h2>Worked example: cross-currency transfer (FX bridge)</h2>
+  <div class="ex">
+    <h4>FX bridge <span class="ai">AI+</span></h4>
+    <p>A1 sends value to A2 so that A2 receives 1 USD, at 27,000 VND per USD. This is not one cross-currency
+    entry; it is two single-currency balanced legs routed through the platform's FX-position wallets
+    (<code>FX_VND</code>, <code>FX_USD</code>), in <b>one</b> transaction under <b>one</b> idempotency key.</p>
+    <table class="rel">
+      <tr><th>wallet</th><th>type</th><th>amount</th><th>currency</th></tr>
+      <tr><td class="mono">A1_VND</td><td class="mono">DEBIT</td><td class="mono">27000.0000</td><td class="mono">VND</td></tr>
+      <tr><td class="mono">FX_VND</td><td class="mono">CREDIT</td><td class="mono">27000.0000</td><td class="mono">VND</td></tr>
+      <tr><td class="mono">FX_USD</td><td class="mono">DEBIT</td><td class="mono">1.0000</td><td class="mono">USD</td></tr>
+      <tr><td class="mono">A2_USD</td><td class="mono">CREDIT</td><td class="mono">1.0000</td><td class="mono">USD</td></tr>
+    </table>
+    <p style="margin-top:12px">Per-currency check: VND DEBIT 27,000 = CREDIT 27,000, and USD DEBIT 1 = CREDIT 1.
+    The rate 27,000 is captured via <code>exchange_rate_id</code> (the point-in-time record) with the
+    exchange value in <code>extra_info</code>, and never enters the balance check. <code>FX_VND</code> /
+    <code>FX_USD</code> are wallets under an <code>FX_POSITION</code> account.</p>
+  </div>
+
   <footer>
-    Expanded from the Section 2.1 base per the journal subsection "Expand the base ERD to have more
-    information". Added: business columns, data types, and the <b>exchange_rate</b> and <b>currency</b>
-    lookups. Deferred (processed later): further fields and structural corrections such as a composite
-    <code>(wallet_id, currency)</code> key, an audit table, and settlement batching. Audit still stays at
-    the application / MongoDB level, so it is not a table here.
+    Expanded and audited from the Section 2.1 base, item by item with the author's approval. AI contributions
+    are marked <b style="color:var(--ai)">AI+</b> (added) / <b style="color:var(--ai)">AI~</b> (revised); every
+    revised original value and the rationale (including human-reasoned decisions recorded as attributed
+    feedback) are in <code>../00-journal.md</code>, "ERD AI expansion and auditing". Layer 3 activity audit is
+    modelled separately as a MongoDB append-only event log (it doubles as the Task 4 use case). Partitioning
+    detail and the reconciliation/alerting design live in Task 2 and Task 5 respectively.
   </footer>
 
 </div>

@@ -201,3 +201,237 @@ This is an extra entity that holds the exchange rate of a date/time. The schema 
 - name
 - code
 
+#### ERD AI expansion and auditing
+
+<ai>
+After the Section 2.1 base ERD, I had the AI expand and audit the model against the
+fintech research (the `0-research/double-entry-ledger` and `0-research/vp-assessment-dba`
+axes) and against the assessment task itself. Every change was listed and approved one by
+one before being applied. This subsection is the changelog, so my original Section 2.1
+work stays visible next to each AI change.
+
+**Markers** used in `docs/ERD.md` (footnotes) and `docs/ERD.html` (colour + badge):
+
+- **AI-added** (`[^ai]`, violet `AI+` badge): a new entity, column, relationship, or rule
+  that was not in my Section 2.1 work.
+- **AI-revised** (`[^air]`, violet `AI~` badge): an existing field or rule of mine whose
+  value or wording was changed. The original is recorded in this changelog.
+
+The ERD files carry only the model plus those markers; the rationale and any replaced
+original values live here.
+
+##### Changelog
+
+**T1 - Add the Layer 2 `audit_log` entity** *(AI-added)* - source:
+`0-research/double-entry-ledger/06-audit-layers.md`
+
+- Task 1 requires "an audit trail" inside the relational core model. My Section 2.1
+  deferred all audit to the application / MongoDB level, so the relational schema had no
+  audit table at all. This closes that gap.
+- Audit is three layers (doc 06). **Layer 1** is the ledger entries themselves (already
+  modelled, immutable, their own audit). **Layer 2** is an in-Postgres `audit_log` for
+  committed state changes to *non-ledger* entities (wallet freeze, KYC tier, limit
+  changes), written in the same transaction as the change. **Layer 3** is the
+  attempts/denials/access activity log, which stays out-of-band.
+- This does **not** reverse my decision to keep audit out of triggers and at the
+  application/MongoDB level. The in-DB `audit_log` records only committed state changes;
+  the rolled-back-attempt audit I argued for remains the Layer 3 MongoDB event log,
+  modelled in a separate file (it doubles as the Task 4 MongoDB use case), not in this ERD.
+
+**T2 - Zero-sum invariant is per currency** *(AI-revised + AI-added example)* - source:
+`0-research/double-entry-ledger/07-multi-currency.md`
+
+- My original Section 2.1 rule read: "Each transaction's entries sum to zero (one CREDIT
+  +amount, one DEBIT -amount, or more for FX)."
+- Revised to: within each currency, `SUM(amount WHERE type=DEBIT) = SUM(amount WHERE
+  type=CREDIT)`.
+- Why per currency (corrected after discussion): a valid 4-entry FX transfer in the bridge
+  model *does* sum to zero globally, so the point is not that valid transactions fail a
+  global check. The point is that a currency-blind total can be fooled: a per-currency
+  imbalance in one currency can cross-cancel an imbalance in another and still net to a
+  balanced global total (for example a 2-entry 27,000 VND debit vs 27,000 USD credit passes
+  a global check but leaks roughly 27,000x value). The per-currency check is strictly
+  stronger and cannot be fooled this way, which is the "by construction, not by hope" bar.
+- This aligns with my own FX choice (section 2.1, option 2: currency-pure wallets plus
+  house FX wallets). I also added a 4-entry FX-bridge worked example to `docs/ERD.md`.
+
+**T3 - Entry direction: positive `amount`, direction in `type` (option c)** *(AI-revised)* -
+source: `0-research/double-entry-ledger/03-schema-design.md`
+
+- My original `entry.amount` note read: "signed: + for CREDIT, - for DEBIT".
+- Revised to: `amount` is a positive magnitude with `CHECK (amount > 0)`; direction lives
+  only in the `type` column. T2's per-currency wording is unchanged by this.
+</ai>
+
+> **Human feedback (Bùi Đức Trí), on T3:** A `CHECK` constraint can already prevent the
+> `type`/sign disagreement in the signed model, for example
+> `CHECK ((type='CREDIT' AND amount>0) OR (type='DEBIT' AND amount<0))`. So T3 is **not** a
+> safety fix: all three encodings (signed only; signed + CHECK; positive amount + `type`)
+> are equally correct. Which one is "better" depends on team consensus and coding
+> standards, not on objective correctness. I chose (c) for this design, and it should be
+> recorded as a standards decision, not a bug fix.
+
+<ai>
+**T4 - Drop `entry.status`; lifecycle on `transaction.status`; entries immutable**
+*(AI-revised + AI-added rule)* - source:
+`0-research/double-entry-ledger/06-audit-layers.md`, `05-integrity-guarantees.md`
+
+- My Section 2.1 had a `status` on both `transaction` ("running/pending/completed") and
+  `entry` ("SETTLED") - redundant, and with two different vocabularies that can drift.
+- Dropped `entry.status`: an entry is an immutable fact, not something with its own
+  lifecycle. Lifecycle now lives only on `transaction.status`, formalized to
+  `PENDING`/`SETTLED`/`REVERSED` (the vocabulary is a spec choice; this set was approved).
+- Added an immutability rule: `entry` is append-only (`REVOKE UPDATE, DELETE`); an undo is
+  a new reversing transaction (`REVERSED`), never an edit or delete. The entries are
+  themselves the lifecycle audit, which is why no per-entry status is needed.
+
+**T5 - Chart of accounts on `account.type`; `wallet.kind` kept** *(AI-revised)* - source:
+`0-research/double-entry-ledger/03-schema-design.md`, `07-multi-currency.md`
+
+- Expanded `account.type` from `customer`/`system` to the chart of accounts: `CUSTOMER`,
+  `PLATFORM_FLOAT`, `PLATFORM_REVENUE`, `MERCHANT_PAYABLE`, `FX_POSITION`. The platform
+  accounts are what let a fee, a top-up, or an FX leg balance.
+- I first proposed putting this role on `wallet` (`wallet.account_type`) and dropped it
+  after the human feedback below: the name collided with the `account` entity, and holding
+  is a wallet-level concept that cannot live at account level.
+- `wallet.kind` (`regular`/`holding`) kept as-is; no role column on wallet. `SUSPENSE` was
+  dropped from the chart of accounts because in-flight money is handled by per-account
+  holding wallets, not a central suspense account.
+</ai>
+
+> **Human feedback (Bùi Đức Trí), on T5:** An account holds both a normal wallet and a
+> holding wallet (per currency); the holding wallet temporarily holds that account's
+> balance while an external flow processes it. So "holding" is a wallet-level kind, not an
+> account-level role, and a platform `SUSPENSE` account is the wrong abstraction here. The
+> account role and the regular/holding distinction are orthogonal: role on `account.type`,
+> spendable-vs-held on `wallet.kind`.
+
+<ai>
+**T6 - Idempotency scoped to `(caller_id, key)`; lifecycle fields dropped; `expires_at`
+kept** *(AI-revised + AI-added field)* - source:
+`0-research/vp-assessment-dba/04-postgres-schema-integrity-idempotency.md`
+
+- Changed the unique constraint from a global `key` to `UNIQUE (caller_id, key)`:
+  client-supplied keys are only unique per caller, so dedup must be scoped per caller.
+- I initially proposed Brandur-style lifecycle fields (`recovery_point`, `locked_at`,
+  `response_code`/`response_body`) and dropped them after the human feedback below: for a
+  single atomic posting they add nothing.
+- Kept only `expires_at`, a retention marker so a cleanup/watchdog job can sweep keys past
+  the retry window and keep the table bounded. Operational, not correctness.
+- Edge case (noted in `docs/ERD.md` too): a multi-step flow whose steps commit separately,
+  with non-rollback-able external calls between them, *would* need the lifecycle state. It
+  is out of scope here; if required we redesign or extend the structure per the
+  business-flow consensus.
+</ai>
+
+> **Human feedback (Bùi Đức Trí), on T6:** If the idempotency key is claimed inside the
+> business transaction, a rollback releases it, and PostgreSQL crash-recovery rolls back any
+> uncommitted transaction on restart, so a crash leaves no partial state. For a single atomic
+> posting there is therefore no in-between state to recover, and `recovery_point`/`locked_at`
+> have no role. They are valid only for a different design, a multi-step transaction whose
+> steps commit separately (with non-rollback-able external calls between them), which is out
+> of scope here and a separate redesign per the business flow. `expires_at` is worth keeping
+> for a cleanup/watchdog process.
+
+<ai>
+**T7 - FX rate: `exchange_id` -> `exchange_rate_id` (typo fix); pinning documented**
+*(typo fix + note clarification, no design change, no AI marker)* - source:
+`0-research/double-entry-ledger/07-multi-currency.md`
+
+- Renamed `transaction.exchange_id` to `exchange_rate_id` to match the referenced PK
+  (`exchange_rate.exchange_rate_id`). This was a typo, not a design change, so no marker.
+- Sharpened the note: the FK points to the exact point-in-time rate record, which is
+  immutable, so the rate is pinned and a retry is deterministic.
+- Dropped my earlier proposals (a typed `fx_rate` column; reframing the FK as a mere "rate
+  source"). Both were wrong, see the human feedback below; the exchange value stays in
+  `extra_info` as intentional denormalization.
+</ai>
+
+> **Human feedback (Bùi Đức Trí), on T7:** `exchange_rate_id` references the exact rate
+> record at a point in time, not the latest rate, so the reference already pins the rate.
+> The exchange value (amount x rate) is derivable from that record, i.e. duplicated, so I
+> deliberately keep it in `extra_info` rather than as a normalized column. No typed
+> `fx_rate` column is needed.
+
+<ai>
+**T8 - Currency consistency by composite FK** *(AI-added)* - source:
+`0-research/vp-assessment-dba/04-postgres-schema-integrity-idempotency.md`
+
+- Gap: nothing stopped an `entry.currency` from differing from its wallet's, even though a
+  wallet is single-currency.
+- Chose option A (keep `entry.currency` for the per-currency check and partition/query, and
+  as an immutable record) over option B (drop it and join to wallet). Enforced consistency
+  by construction: `wallet` gets `UNIQUE (wallet_id, currency)`, and `entry` gets a composite
+  FK `(wallet_id, currency)` -> `wallet`.
+- Because `wallet_id` is the wallet PK (one currency per wallet), the composite FK makes a
+  mismatched currency impossible. Caveat recorded: both entry FK columns are `NOT NULL`, or
+  the default `MATCH SIMPLE` would skip the check on a NULL.
+
+**T9 - Entry partitioning kept logical in the ERD, with a physical note** *(AI-added note)* -
+source: `0-research/double-entry-ledger/03-schema-design.md`
+
+- Decision (human, below): keep the ERD logical with `entry` PK = `entry_id`, and add a note
+  documenting the physical consequence rather than changing the PK here. The partitioning
+  detail itself stays in Task 2.
+- Note added to `docs/ERD.md`: under monthly range partitioning on `created_at`, the physical
+  PK becomes `(entry_id, created_at)` (PostgreSQL requires the partition key in the PK), so
+  `entry_id` is then unique only with `created_at`. Safe here: `entry_id` is a UUID and
+  nothing FKs into `entry`. Non-unique secondary indexes (e.g. `wallet_id`) need no
+  `created_at`.
+</ai>
+
+> **Human feedback (Bùi Đức Trí), on T9:** Keep the ERD logical first, but note what is going
+> on. Surfaced the trade-off: a composite PK `(entry_id, created_at)` no longer makes
+> `entry_id` unique on its own (the same id could repeat across partitions), and a plain
+> secondary index on `wallet_id` does not need `created_at` (only UNIQUE/PK must include the
+> partition key).
+
+<ai>
+**T10 - Reconciliation rule for the cached balance** *(AI-added rule)* - source:
+`0-research/double-entry-ledger/05-integrity-guarantees.md`
+
+- Added one integrity rule: a scheduled `balance_audit` compares each wallet's cached
+  `balance` against `SUM(entries)` for that wallet and alerts on any nonzero discrepancy.
+  This makes "balance is never the source of truth" operationally verifiable.
+- Rule only, no schema change. The author plans to develop the detailed checks and alerting
+  further later (Task 5, observability).
+</ai>
+
+<ai>
+**L3 audit file - `docs/audit-l3-mongodb.md` created** *(AI-drafted deliverable)* - source:
+`0-research/double-entry-ledger/06-audit-layers.md`
+
+- Realizes the plan that the Layer 3 activity audit (attempts, denials, replays, access) is a
+  MongoDB append-only event log in a separate file (see T1). It also serves as the Task 4
+  MongoDB use case, justified over a Postgres JSONB column.
+- Collection type is left as an open decision in the file, presenting all three options
+  (A: capped sized huge + resizable; B: time-series + insert/find-only role; C: regular +
+  role + TTL), to revisit later. Verified facts that shaped it: the oplog's minimum-retention
+  (`oplogMinRetentionHours`) is oplog-only and does not apply to user capped collections;
+  capped collections are resizable via `collMod` in 6.0+ (growth preserves data) but serialize
+  writes and cannot be sharded.
+</ai>
+
+> **Human feedback (Bùi Đức Trí), on the L3 collection type:** Try to keep the capped-collection
+> approach by sizing it extremely large, and check whether the oplog's minimum-retention-time
+> idea can be applied here. Outcome (verified against the MongoDB manual): the huge + resizable
+> sizing is viable and mitigates overwrite, but the oplog min-retention feature is oplog-only, so
+> a user capped collection has no built-in time floor. Decision deferred; all options were written
+> to the file for now.
+
+<ai>
+**Audit_log detached from relationships** *(AI-revised, per human direction)* - source:
+`0-research/double-entry-ledger/06-audit-layers.md`
+
+- Removed the drawn `transaction -> audit_log` relationship from `docs/ERD.md` and
+  `docs/ERD.html`: the Mermaid relationship line, the SVG connector and its labels, and the
+  relationships-table rows.
+- `audit_log` is now a detached entity. It audits all entities through the polymorphic
+  `(entity_type, entity_id)` pair (not a drawable FK); `transaction_id` stays as an optional
+  operation pointer but is no longer drawn as a relationship.
+</ai>
+
+> **Human feedback (Bùi Đức Trí):** `audit_log` audits all entities, so a single drawn line to
+> `transaction` is misleading (it reads as if it only relates to transactions), and drawing a line
+> to every entity makes the ERD messy. Detach it: show it as a standalone entity with no
+> relationship lines.
