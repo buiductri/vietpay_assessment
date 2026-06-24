@@ -86,3 +86,7 @@ Our analysis can cover most of the ADR here, but the task requires some more tho
 - I am very familiar with MongoDB and Grafana.
 - I am not as familiar with PostgreSQL and Neo4j since I have not had the chance to actually maintain those services in production yet, but I have some knowledge about them; so I need to study more.
 - About Flyway and Liquibase, I have no idea, so my approach will be ad hoc scripts first, then have AI do some search for me about these systems to see if I can grasp the gist of these systems or not.
+
+### 1.3. Journal audit / feedback
+
+The audit shows my lack of knowledge of PostgreSQL. This is good, it gives me a pointer on how to address my gap here. Most of the clarification is for things I already know or awareness of what I lack. Some of it is kind of a misunderstanding because my thought wording is not clear enough, not that I do not know about that part, but I kind of forgot to include it in the thought. It's good to know how to clarify the thought. The final part is what the AI already assumes, like settlement; I will ignore this because of my lack of domain knowledge and stick to the technical aspect of the task. Lack of knowledge is not a bad thing; relying on AI for what I don't know is bad.
