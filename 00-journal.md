@@ -140,13 +140,64 @@ There are some edge cases that I am thinking about:
 - External process that holds the transaction in between state. This is where the holding wallet comes from, but the more I think about it, the more unclear it becomes to be integrated into our core system. This problem needs a more thorough analysis so I will skip them, there is no time. We just accept that the higher level transaction will be managed elsewhere, then if that transaction is invalid and needs to roll back, we add a new transaction to move money from holding back to the original wallet.
 
 
-#### Final ERD
+#### Generate ERD
 
 I will use AI to draw ERD for me based on above reasoning.
 
+<ai>
 The ERD lives in two forms:
 
 - [`docs/ERD.md`](./docs/ERD.md) - Mermaid diagram, entity tables, and the integrity rules from this reasoning (renders on GitHub).
 - [`docs/ERD.html`](./docs/ERD.html) - standalone, offline visual artifact (open in a browser).
 
 It draws exactly the entities reasoned through above: account, wallet (including holding wallets), transaction, entry, and idempotency key, plus the zero-sum and idempotency rules. FX uses multiple currency-pure wallets and house exchange wallets, and audit stays at the application/MongoDB level, so neither adds an entity here.
+</ai>
+
+#### Expand the base ERD to have more information
+
+My core ERD only has base relationships, now we need to expand them to serve as real business mapping. Trivial fields like created_at, updated_at, etc. will not be mentioned unless necessary.
+
+Since the ERD suggests we design datatype too, here are some rules that need to be followed:
+- Use fixed length number to represent money value, avoid floating point; usually 4 decimal number is enough so we can use NUMERIC(19,4) for money value
+- ID will use UUID, we can design it as fixed CHAR(n) or TEXT but since no specification, we keep UUID.
+
+##### **Account**: 
+- name
+- type (customer, system)
+- status (active, closed)
+- other references or attributes depend on specification
+- trivial fields
+
+##### **Wallet**:
+- name
+- balance: this field is calculated within transaction, but never source of truth
+- status (active, closed)
+- trivial fields
+
+##### **Transaction**:
+- type: enum based on specification (transfer, exchange, fee, etc.)
+- status: (running, pending, completed, etc.)
+- exchange_id: this field can link to an exchange rate table that tracks rate every day (e.g. OANDA)
+- created_at: time commit transaction
+- description:
+- extra_info: detailed info (like in multiple currency transaction, system fee, exchange value, etc.), json format
+
+##### **Entry**:
+
+##### **Idempotency Key**
+- caller_id: the id of request initial entity, like customer account or system account
+- request_id: the api request id, this is different from idempotency key
+
+##### **Exchange Rate**
+This is an extra entity that holds the exchange rate of a date/time. The schema might vary between providers. But I will use OANDA as a reference:
+- exchange_rate_id
+- exchange_date
+- base_currency/base_currency_id
+- currency/currency_id
+- rate
+
+##### **Currency**
+- currency_id
+- name
+- code
+
