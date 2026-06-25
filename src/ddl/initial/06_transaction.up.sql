@@ -15,9 +15,9 @@ CREATE TABLE IF NOT EXISTS transactions (
     -- fee, ...").  Left as free TEXT deliberately rather than inventing a closed
     -- CHECK list; pin it with a CHECK once the business set is finalised.
     type              TEXT        NOT NULL,
-    -- `status` IS a closed, approved set (ERD / journal T4).  CONTEXT.md sketches
-    -- a fuller machine (PENDING -> PROCESSING -> SETTLED | FAILED | REVERSED);
-    -- the ERD-approved set for this model is the three below.
+    -- `status` IS a closed, approved set: PENDING, SETTLED, REVERSED (journal T4).
+    -- An earlier draft sketched a fuller PROCESSING/FAILED machine; those states
+    -- were dropped when entry lifecycle was consolidated onto transaction.status.
     status            TEXT        NOT NULL DEFAULT 'PENDING'
         CONSTRAINT transactions_status_ck CHECK (status IN ('PENDING', 'SETTLED', 'REVERSED')),
     -- the exact point-in-time rate record used; immutable, so the rate is pinned
