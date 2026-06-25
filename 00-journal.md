@@ -679,3 +679,142 @@ harness is [`src/ddl/perf/bench.sql`](./src/ddl/perf/bench.sql). Headline, on a
 > want both the optimised join and the summary table introduced here. And make it
 > clear that the deep performance analysis is the AI's work, not my own.
 
+## 4. Zero-downtime migration
+
+We will use the example in the task requirement to demonstrate the expansion. The column name `settlement_batch_id` is just an example, so this task is really about deployment planning. I treat the column as a vehicle for a zero-downtime DDL change and keep its business meaning out of scope (history is backfilled to a sentinel batch, see below).
+
+The goal is to add the column `settlement_batch_id` with constraint `NOT NULL`. For most RDBMS, we can achieve this using a single command
+
+```
+# populate full working command here as pgsql syntax
+ALTER TABLE entries ADD COLUMN settlement_batch_id NOT NULL
+```
+
+This works for small AND infrequent access table, since schema changes must put exclusive lock on the table, and block almost all other operations. This is risky, so in production, we avoid this change as much as possible, unless reach consensus about downtime, and thorough testing the time needed for the task to ensure maintenance windows not need to extend past planning. Also the biggest risk is transaction rollback. The more it holds locks, the effect on transaction log will be bigger. In the worst case scenario I have observed, a schema change took 2 hours to run then failed, and took more than 3 hours to rollback due to cascaded effect on transaction log and bottleneck on disk IO, which almost brought the instance down. Luckily the instance is the testing one so we avoided a big mistake there.
+
+<ai>
+**PostgreSQL specifics of that naive command (correction).** Two things differ from
+the SQL Server intuition and reframe where the cost is:
+
+- The command as written fails: `ADD COLUMN ... NOT NULL` with **no default** errors
+  on a non-empty table (existing rows would violate NOT NULL). The runnable single
+  command is `ALTER TABLE entries ADD COLUMN settlement_batch_id UUID NOT NULL
+  DEFAULT '<constant>'`.
+- In PostgreSQL 11+ that command does NOT rewrite the table: a constant default is
+  stored once in the catalog, so the add is metadata only and fast even on 50M rows.
+  So it is not the table-rewrite disaster older engines suffer. It still takes a
+  brief `ACCESS EXCLUSIVE` lock, which under load can queue behind a long statement
+  and block everything behind it.
+
+The real reason the single command does not fit is the value, not the lock: a
+settlement batch is **per row**, not one constant for all history, so the value must
+be **backfilled**, not defaulted. And the genuinely blocking operation is the later
+`SET NOT NULL`, which by default scans the whole table under `ACCESS EXCLUSIVE`.
+That scan is the outage we design around. This is exactly why a per-row value needs
+expand-contract.
+</ai>
+
+Since we want zero-downtime, the approach has to be changed. In SQL Server, we split the changes into 3 parts:
+- (1) ADD COLUMN with NULL and DEFAULT: this still holds lock, but the change is metadata only, so even though still have locking, it should be quick and rollback is trivial, new data will have default value so that old queries do not insert NULL for new data
+- (2) Run script to populate data, either default or computed, we can decide as per specification
+- (3) Run check to ensure all data is not NULL
+- (4) ALTER COLUMN with NOT NULL
+- (5) Working with application side to ensure new versions are deployed. We can then remove DEFAULT if not needed.
+
+This is the right shape. PostgreSQL has its own internals, so I had AI turn this sketch into a concrete, tested PostgreSQL expand-contract migration following the direction above. The mapping, and the PostgreSQL realities that changed it, are below.
+
+<ai>
+**Deliverable.** `src/ddl/migrations/001_settlement_batch_id/` (separate from the
+`initial/` baseline, because an expand-contract migration is gated by application
+deploys and is a human-driven runbook, not a single automated `up`). Five ordered,
+individually reversible steps plus a runbook `README.md`:
+
+```
+01_expand        ADD nullable column (+ settlement_batches parent + sentinel)
+02_backfill      disable immutability, fill history partition-by-partition (committed batches)
+03_restore_immutability   re-enable + verify the deny trigger everywhere
+04_index         online index (partitioned pattern)
+05_promote       CHECK NOT VALID -> VALIDATE -> SET NOT NULL
+```
+
+The whole lifecycle was validated end to end against the provided PostgreSQL 17.2,
+in an isolated schema (so nothing shared was touched): up through promote, idempotent
+re-runs, per-phase rollback, and full teardown. Changelog of what the PostgreSQL
+reality forced:
+
+**T1 - Target table: `entries`, not `transactions`** *(human direction below)*. The
+assessment's flat 50M-row "transactions" table is what Task 1 split into a
+`transaction` header plus `entry` lines, and the 50M rows live in `entries`
+(journal sec. 3). So the migration targets `entries`.
+
+**T2 - The append-only collision (the core of the answer).** `entries` is immutable
+by Invariant 3, enforced two ways in `initial/11`: `REVOKE UPDATE` from `vietpay_app`
+**and** a `deny_mutation` trigger. A NOT NULL backfill must UPDATE every historical
+row, which both forbid. A trigger fires for every role (owner included), so the
+backfill, run by the OWNER/DBA, must **temporarily disable** `trg_entries_immutable`
+for the backfill window. The payoff of the two-layer design: while the trigger is
+off, the privilege `REVOKE` still holds, so the application still cannot rewrite
+history during the window. This is the most interesting part of doing this on a
+ledger table, and is recorded as the answer, not a workaround.
+
+**T3 - `entries` is partitioned, which changes the mechanics.** During this work the
+Task 2 partitioning had landed in the DDL: `entries` is now `PARTITION BY RANGE
+(created_at)`, monthly, PK `(entry_id, created_at)`. Four things were verified
+against the live database rather than assumed:
+  - A partitioned table **rejects a `NOT VALID` foreign key**, so the online FK trick
+    is unavailable. The deliverable keeps `settlement_batches` + sentinel but adds no
+    DB-level FK; the README documents the options (validated FK in a window;
+    per-partition NOT VALID + VALIDATE; or app-enforced, common for big fact tables).
+  - `CREATE INDEX CONCURRENTLY` is **illegal on a partitioned parent**, so the index
+    is built `ON ONLY` the parent, then CIC per partition, then `ATTACH` (step 04).
+  - `ctid` is unique only within one partition, so the backfill runs **partition by
+    partition** (step 02), which is also the partitioning payoff: old months are
+    static and backfill with far less contention.
+  - `DISABLE TRIGGER` on the parent cascades to partitions in PG 15+ but not PG 14,
+    so steps 02/03 disable and re-enable on the parent **and** loop every partition
+    (version-safe), and step 03 verifies via `pg_trigger.tgenabled` that no clone is
+    left disabled (`deploy.sh verify` only checks the trigger exists).
+
+**T4 - The SET NOT NULL fast path (PG 12+), measured.** Instead of the scanning
+`SET NOT NULL`, step 05 adds `CHECK (col IS NOT NULL) NOT VALID` (instant), `VALIDATE
+CONSTRAINT` (SHARE UPDATE EXCLUSIVE, reads and writes continue), then `SET NOT NULL`
+(fast, because the planner trusts the validated CHECK and skips the scan on the
+parent and every partition), then drops the redundant CHECK. This is the headline of
+the whole task, so I measured it on 2,000,000 rows rather than asserting it: the
+fast-path `SET NOT NULL` took **1.4 ms** (scan skipped) versus **581 ms** for a naive
+`SET NOT NULL` (full ACCESS EXCLUSIVE scan). The equivalent verification scan
+(379 ms) is paid inside `VALIDATE`, which holds only SHARE UPDATE EXCLUSIVE and does
+not block reads or writes. At 50M rows the naive path becomes a multi-second
+exclusive lock; the fast path stays a millisecond metadata flip.
+
+**T5 - Dual-write window and old-vs-new read shape.** Expand adds the column NULLABLE
+(both old and new app tolerate it). App `vN+1` then dual-writes the column on every
+INSERT but **still reads the old shape**. Backfill fills the historical NULLs. Only
+after promote does app `vN+2` read/require the new shape. So the application reads
+the OLD shape from expand through promote, and the NEW shape only after the column is
+NOT NULL and every row has a value.
+
+**T6 - Rollback at each phase, and the asymmetry.** Each step has a `.down.sql`, and
+the README tabulates per-phase rollback. The one trap: once the column is NOT NULL,
+an app version that does not write it fails every INSERT, so to unwind past the
+dual-write app you must `DROP NOT NULL` (05.down) **before** reverting the app.
+Always relax the constraint before reverting the writer.
+
+**T7 - Idempotency and lock safety.** Every up step re-runs cleanly (catalog guards
+on `pg_constraint` / `pg_attribute` / `pg_index` / `pg_inherits`, `IF NOT EXISTS`,
+`WHERE ... IS NULL` backfill, trigger no-ops, `ATTACH` skipped when attached,
+invalid-leaf-index drop-then-rebuild). Catalog checks are scoped by OID
+(`'entries'::regclass` + `pg_inherits`), not relname, so a same-named table in
+another schema cannot skew a check (a real bug I caught and fixed during validation).
+Every brief `ACCESS EXCLUSIVE` operation runs under a short `lock_timeout` with a
+bounded retry, so it cannot pile up behind a long statement under load.
+</ai>
+
+> **Human direction (Bùi Đức Trí):** The column goes on `entries`, not on a
+> `transactions` header. We already mapped the assessment's original flat
+> "transactions" table onto the `entry` entity in Task 1, so `entries` is the live
+> 50M-row table the requirement is talking about. The immutability collision that
+> this creates is not a reason to move the column off `entries`; it is part of the
+> answer, handled by an audited, privileged disable of the deny trigger for the
+> backfill window, with the privilege REVOKE still protecting the application.
+
