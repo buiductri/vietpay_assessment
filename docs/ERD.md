@@ -10,8 +10,10 @@ per-currency balance rule, immutability and currency-consistency guarantees, ide
 scoping, and the FX worked example (full changelog in the journal).
 
 > This document is being expanded and audited item by item (see the changelog in
-> `../00-journal.md`, "ERD AI expansion and auditing"). Items still deferred (for example
-> settlement batching, a Task 3 concern) are noted as they come.
+> `../00-journal.md`, "ERD AI expansion and auditing"). Items intentionally kept out of the
+> core ERD are noted as they come; settlement batching (a Task 3 concern) is one such item,
+> delivered separately as the expand-contract migration in
+> `../src/ddl/migrations/001_settlement_batch_id/`.
 >
 > Decisions encoded here, from the journal:
 >

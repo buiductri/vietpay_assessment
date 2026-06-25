@@ -29,7 +29,7 @@ current; it regresses fast.
 | **FX bridge** | A cross-currency transfer routed as two single-currency balanced legs through the platform's `FX_POSITION` wallets (`FX_VND`, `FX_USD`), in one transaction under one idempotency key. The rate never enters the balance check. |
 | **Exchange Rate** | An immutable, point-in-time rate for a date and currency pair (OANDA-style). A transaction references the exact record by `exchange_rate_id`, so the rate is pinned and a retry is deterministic. |
 | **Settlement** | The downstream clearing step that finalises funds movement with an external network or bank. A transaction moves `PENDING -> SETTLED`. |
-| **Settlement Batch** | A group of transactions settled together in one clearing cycle (`settlement_batch_id`). A Task 3 (zero-downtime migration) concern, deliberately not in the core ERD. |
+| **Settlement Batch** | A group of transactions settled together in one clearing cycle (`settlement_batch_id`). A Task 3 (zero-downtime migration) concern, deliberately not in the core ERD; delivered as the expand-contract migration in `src/ddl/migrations/001_settlement_batch_id/`. |
 | **Audit Trail** | The three-layer record of changes. Layer 1 is the ledger entries (immutable, their own audit). Layer 2 is an in-Postgres `audit_log` of committed non-ledger state changes. Layer 3 is a MongoDB append-only activity log (attempts, denials, access). |
 | **Derived balance** | `wallet.balance` is a cache computed from the entries inside the transaction. It is **never** the source of truth; the entries are. A scheduled `balance_audit` reconciles it. |
 
@@ -182,9 +182,9 @@ This repo is a **design and SQL exercise** (assessment deliverable), not a runni
 |---|---|---|
 | 1 - Relational core model | DDL SQL + ER diagram + design notes | `docs/ERD.md`, `src/ddl/` |
 | 2 - Query & performance | Optimised query + index/partition strategy | `src/ddl/perf/`, `docs/query-performance.md`; partitioning in `src/ddl/initial/07` |
-| 3 - Zero-downtime migration | Expand-contract migration scripts + rollback | (in progress) |
-| 4 - Polyglot modelling | MongoDB audit log + Neo4j fraud graph | `docs/audit-l3-mongodb.md` (Mongo), Neo4j (in progress) |
-| 5 - Observability | Grafana dashboard spec + alert thresholds | (in progress) |
+| 3 - Zero-downtime migration | Expand-contract migration scripts + rollback | `src/ddl/migrations/001_settlement_batch_id/` (5-phase expand-contract + per-phase rollback; validated on PG 17.2) |
+| 4 - Polyglot modelling | MongoDB audit log + Neo4j fraud graph | `docs/audit-l3-mongodb.md` + `src/mongo/create_activity_audit.js` (Mongo), Neo4j (in progress) |
+| 5 - Observability | Grafana dashboard spec + alert thresholds | `docs/observability.md` (two-layer dashboard, SLIs/SLOs, alert thresholds + page/ticket severity) |
 | 6 - ADR | Architecture Decision Records | `docs/adr/` |
 
 N/A artifacts (design exercise, no application code): `Dockerfile`, `compose.yaml`,
