@@ -1,4 +1,19 @@
-# VietPay DBA Assessment: Report
+# [VietPay DBA Assessment: Report](https://vietpay-assessment.buiductri.com/?r=assessment-report)
+
+**Live rendered report:** https://vietpay-assessment.buiductri.com/
+
+A read-only hub that renders this assessment report and its supporting research in the browser.
+The Assessment Report (this deliverable) is listed first, followed by the related research bundles:
+
+- [Assessment Report - VietPay DBA Briefing Pack](https://vietpay-assessment.buiductri.com/?r=assessment-report) - this repo's six-task deliverable
+- [Double-Entry Ledger in Fintech Payments](https://vietpay-assessment.buiductri.com/?r=double-entry-ledger)
+- [Neo4j and Graph Databases in Fintech](https://vietpay-assessment.buiductri.com/?r=neo4j-graph-fintech)
+- [PostgreSQL Deep Dive](https://vietpay-assessment.buiductri.com/?r=postgresql)
+- [Service Level Objectives (SLOs)](https://vietpay-assessment.buiductri.com/?r=slos)
+- [The Gist of Graph Problems](https://vietpay-assessment.buiductri.com/?r=graph-problem-patterns)
+- [VietPay DBA Assessment Research](https://vietpay-assessment.buiductri.com/?r=vp-assessment-dba) - the research knowledge base
+
+---
 
 The design and SQL deliverable for the VietPay Enterprise Database Architect take-home. This
 is a design exercise (SQL, diagrams, design notes), not a running application. The reasoning is
