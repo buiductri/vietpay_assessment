@@ -9,7 +9,7 @@ window.SITE = {
   brand: "VIETPAY",
   classification: "ASSESSMENT",
   title: "VietPay DBA <b>Briefing Pack</b>",
-  titlePlain: "VietPay DBA Assessment Briefing Pack",
+  titlePlain: "Assessment Report - VietPay DBA Briefing Pack",
   subtitle: "six tasks, authorship marked",
   description:
     "A research-format reorganization of the VietPay Enterprise Database Architect take-home, by its six tasks, with the candidate's reasoning kept verbatim and every AI-assisted contribution marked.",
