@@ -66,3 +66,26 @@ DROP TRIGGER IF EXISTS trg_audit_logs_no_truncate ON audit_logs;
 CREATE TRIGGER trg_audit_logs_no_truncate
     BEFORE TRUNCATE ON audit_logs
     FOR EACH STATEMENT EXECUTE FUNCTION deny_mutation();
+
+-- `entries` is range-partitioned (step 07).  Row-level UPDATE/DELETE triggers
+-- on a partitioned parent ARE cloned to every partition automatically, but the
+-- statement-level TRUNCATE trigger above is NOT -- it only guards the parent, so
+-- a direct `TRUNCATE entries_pYYYYMM` would slip past it.  The app role can never
+-- TRUNCATE (no privilege, and partitions grant it nothing), so the guarantee
+-- holds regardless; this closes the defence-in-depth gap for the owner/superuser
+-- path by attaching the guard to each existing partition.  Future partitions get
+-- it from create_entries_partition() (step 07), which now finds deny_mutation().
+DO $$
+DECLARE part regclass;
+BEGIN
+    IF to_regclass('public.entries') IS NOT NULL THEN
+        FOR part IN
+            SELECT inhrelid::regclass FROM pg_inherits WHERE inhparent = 'entries'::regclass
+        LOOP
+            EXECUTE format('DROP TRIGGER IF EXISTS trg_entries_no_truncate ON %s', part);
+            EXECUTE format(
+                'CREATE TRIGGER trg_entries_no_truncate BEFORE TRUNCATE ON %s '
+                'FOR EACH STATEMENT EXECUTE FUNCTION deny_mutation()', part);
+        END LOOP;
+    END IF;
+END $$;

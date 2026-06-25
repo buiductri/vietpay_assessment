@@ -177,12 +177,12 @@ append-only fact: it carries no lifecycle `status` of its own (lifecycle lives o
 | created_at | timestamptz | | |
 
 > **Physical note** [^ai]: this ERD shows the logical model, so `entry`'s PK is `entry_id`.
-> When the table is range-partitioned monthly on `created_at` (Task 2, query & performance),
-> PostgreSQL requires the partition key in the PK, so the physical PK becomes
-> `(entry_id, created_at)`. Consequence: `entry_id` is then unique only together with
-> `created_at`, not globally; this is safe here because `entry_id` is a UUID and nothing
-> references `entry` by FK (it is a leaf). Non-unique secondary indexes (for example on
-> `wallet_id`) do not need `created_at`.
+> Physically the table **is** range-partitioned monthly on `created_at` (baseline DDL
+> `initial/07_entry.up.sql`, the Task 2 work in journal section 3). PostgreSQL requires the
+> partition key in the PK, so the physical PK is `(entry_id, created_at)`. Consequence:
+> `entry_id` is then unique only together with `created_at`, not globally; this is safe here
+> because `entry_id` is a UUID and nothing references `entry` by FK (it is a leaf). Non-unique
+> secondary indexes (for example on `wallet_id`) do not need `created_at`.
 
 ### idempotency_key
 Tracks the idempotency key so a duplicate request cannot post twice, and maps it to the

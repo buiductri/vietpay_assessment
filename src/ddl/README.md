@@ -9,7 +9,7 @@ notes live in the report body); the ER diagram is `docs/ERD.md` / `docs/ERD.html
 `[^air]` markers and the journal changelog), the DDL follows it. The ERD entities
 are named in the singular (conceptual); the physical **tables are plural**
 (`accounts`, `wallets`, `transactions`, `entries`, `currencies`,
-`exchange_rates`, `idempotency_keys`, `audit_logs`) — a naming standard.
+`exchange_rates`, `idempotency_keys`, `audit_logs`), a naming standard.
 
 ## Layout
 
@@ -27,19 +27,19 @@ src/ddl/
 
 `initial/` holds the one-time schema creation. Later **incremental** changes
 (e.g. the Task 3 expand-contract migration) belong in their own separate phase,
-tracked under their own keys — this runner owns only `initial/`. Each step is
+tracked under their own keys; this runner owns only `initial/`. Each step is
 **idempotent** (`IF NOT EXISTS`, `CREATE OR REPLACE`, drop-then-create for the
 constraint trigger) and **reversible** (a matching `.down.sql`).
 
-## Deployment state — accidental re-deploy is safe
+## Deployment state: accidental re-deploy is safe
 
 The runner records applied steps in a `schema_migrations` table
 (`step`, `checksum`, `applied_at`, `applied_by`). On `up`:
 
 - a step already recorded is **skipped** (not re-run);
 - each applied step stores an **md5 checksum** of its `.up.sql`. If a step that
-  was already applied has since **changed on disk**, `up` **refuses** to proceed
-  — you must ship a new migration rather than silently mutate an applied one;
+  was already applied has since **changed on disk**, `up` **refuses** to proceed.
+  You must ship a new migration rather than silently mutate an applied one;
 - step + bookkeeping row are written in **one transaction**, so a mid-step
   failure rolls the whole step back and leaves the tracker untouched.
 
@@ -110,12 +110,19 @@ exist, and they are chosen for this design, not asserted as the only right way:
 - **Idempotency without Brandur `recovery_point`/`locked_at`** (journal T6):
   for a single atomic posting they add nothing; only `expires_at` is kept.
 
-## Scope boundary with Task 2
+## Task 2 (query & performance) in the baseline
 
-`entries` here is the **logical model**: PK `entry_id`, not partitioned, with
-baseline FK/lookup indexes. Task 2 (query & performance) converts `entries` to
-monthly `RANGE (created_at)` partitioning, at which point the physical PK
-becomes `(entry_id, created_at)` and the settlement-query indexes are added.
-That conversion is intentionally **not** in this Task 1 DDL; see the partition
-note in `initial/07_entry.up.sql` and the ERD's physical note.
+`entries` is created **monthly `RANGE (created_at)` partitioned** in
+`initial/07_entry.up.sql`, with the physical PK `(entry_id, created_at)`, a
+`create_entries_partition()` helper, a deterministic window of month partitions,
+and a DEFAULT. The header carries a covering partial index for the settlement
+report (`idx_transactions_settled_created`, `initial/06_transaction.up.sql`).
+Journal section 3 folds these structural changes into the baseline rather than a
+separate phase (greenfield/empty case); the **query-level** Task 2 artifacts (the
+optimised report, the frozen-month rollup, and the reproducible benchmark) live
+in [`../perf/`](../perf/).
+
+> Converting an **already-populated** `entries` table to partitioned online (not
+> the greenfield `CREATE` here) is a separate online migration, deliberately
+> deferred. See journal section 3.
 ```

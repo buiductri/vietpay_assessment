@@ -100,10 +100,11 @@ These must be enforced by the schema, not by application hope ("by construction,
 7. **Money and ids.** Money is `NUMERIC(19,4)` (no floating point); rates are `NUMERIC(19,8)`;
    ids are `UUID`.
 
-8. **Partition alignment (physical, Task 2).** `entry` is range-partitioned monthly on
-   `created_at`. Queries should carry a `created_at` predicate to get partition pruning; the
-   physical PK becomes `(entry_id, created_at)`. The ERD stays logical (PK `entry_id`); the
-   partitioning detail lives in Task 2.
+8. **Partition alignment (physical).** `entry` is range-partitioned monthly on
+   `created_at` in the baseline DDL (`initial/07_entry.up.sql`). Queries should carry a
+   `created_at` predicate to get partition pruning; the physical PK is `(entry_id,
+   created_at)`. The ERD stays logical (PK `entry_id`). The settlement report's join and the
+   covering partial header index are the Task 2 work (journal section 3, `src/ddl/perf/`).
 
 ---
 
@@ -180,7 +181,7 @@ This repo is a **design and SQL exercise** (assessment deliverable), not a runni
 | Task | Deliverable | Where |
 |---|---|---|
 | 1 - Relational core model | DDL SQL + ER diagram + design notes | `docs/ERD.md`, `src/ddl/` |
-| 2 - Query & performance | Optimised query + index/partition strategy | (in progress) |
+| 2 - Query & performance | Optimised query + index/partition strategy | `src/ddl/perf/`, `docs/query-performance.md`; partitioning in `src/ddl/initial/07` |
 | 3 - Zero-downtime migration | Expand-contract migration scripts + rollback | (in progress) |
 | 4 - Polyglot modelling | MongoDB audit log + Neo4j fraud graph | `docs/audit-l3-mongodb.md` (Mongo), Neo4j (in progress) |
 | 5 - Observability | Grafana dashboard spec + alert thresholds | (in progress) |
