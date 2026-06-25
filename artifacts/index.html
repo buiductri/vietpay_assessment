@@ -1,0 +1,890 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VietPay DBA Assessment Briefing Pack - six tasks, authorship marked</title>
+<meta name="description" content="A research-format reorganization of the VietPay Enterprise Database Architect take-home, by its six tasks, with the candidate's reasoning kept verbatim and every AI-assisted contribution marked.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/engine.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%2306080c'/%3E%3Ccircle cx='16' cy='16' r='6' fill='none' stroke='%23ff5a4d' stroke-width='2.5'/%3E%3Ccircle cx='16' cy='16' r='2.4' fill='%232fe3cf'/%3E%3C/svg%3E">
+</head>
+<body>
+<div class="bg-fx"></div>
+<div class="grain"></div>
+
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand" id="brand"></div>
+    <nav class="nav" id="nav"></nav>
+    <div class="side-foot" id="side-foot"></div>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <button class="menu-btn" id="menuBtn" aria-label="menu">☰</button>
+      <span class="seg crit"><b>CLASSIFICATION</b> <span class="v" id="tb-class">RESEARCH</span></span>
+      <span class="seg"><b>LOC</b> <span class="v" id="tb-loc">OVERVIEW</span></span>
+      <span class="spacer"></span>
+      <span class="seg" id="tb-metric"></span>
+      <span class="live">ONLINE</span>
+    </div>
+    <div id="content"></div>
+  </main>
+</div>
+
+<script type="text/markdown" id="md-overview">
+# VietPay DBA Assessment: Briefing Pack
+
+**A research-format reorganization of the VietPay Enterprise Database Architect take-home, by its six tasks, with the candidate's reasoning kept verbatim and every AI-assisted contribution marked.**
+
+This pack adds no new analysis. It re-presents the design journal (`00-journal.md`) and the committed documentation, rebucketed into one document per assessment task, in the `/research` skill format. The same human / `<ai>` split the journal uses is carried through here as OWNED and AI-GENERATED pills.
+
+> **Provenance key.** **<span style="background:#10363a;color:#5eead4;padding:2px 9px;border-radius:5px;font-size:.82em;letter-spacing:.04em">OWNED (Bùi Đức Trí)</span>** marks the candidate's own words, kept verbatim. **<span style="background:#2b2350;color:#c4b5fd;padding:2px 9px;border-radius:5px;font-size:.82em;letter-spacing:.04em">AI-GENERATED</span>** marks AI-assisted content, including the synthesis below.
+
+## Research Files
+
+| File | Task | Description |
+| --- | --- | --- |
+| [00-introduction.md](./00-introduction.md) | Overview | Candidate background, method, and the authorship model |
+| [01-relational-core-model.md](./01-relational-core-model.md) | Task 1 | Double-entry ledger, entities, ERD audit, DDL |
+| [02-query-and-performance.md](./02-query-and-performance.md) | Task 2 | Settlement-report join, partitioning, covering index, query plans |
+| [03-zero-downtime-migration.md](./03-zero-downtime-migration.md) | Task 3 | Expand-contract `settlement_batch_id NOT NULL` with per-phase rollback |
+| [04-polyglot-modelling.md](./04-polyglot-modelling.md) | Task 4 | MongoDB Layer 3 audit (owned) + Neo4j fraud graph (AI-composed) |
+| [05-observability.md](./05-observability.md) | Task 5 | Two-layer Grafana dashboard, SLOs, alert thresholds |
+| [06-design-write-up-adr.md](./06-design-write-up-adr.md) | Task 6 | ADR set, consistency model, data contracts |
+
+## Tasks and status
+
+*Status as recorded in the report `README.md` (a structural index, not authored prose).*
+
+| Task | Deliverable | Status |
+|---|---|---|
+| 1 - Relational core model | DDL + ER diagram + design notes | Done; validated live on PG 17.2 |
+| 2 - Query & performance | Optimised query + index/partition strategy | Done; plan analysis AI-authored |
+| 3 - Zero-downtime migration | Expand-contract scripts + rollback | Done; validated end to end on PG 17.2 |
+| 4 - Polyglot modelling | MongoDB audit log + Neo4j fraud graph | MongoDB done; Neo4j model AI-composed from research |
+| 5 - Observability | Grafana dashboard spec + alert thresholds | Done |
+| 6 - ADR | Architecture Decision Records | 0001-0007 accepted; 0008-0010 framed as Proposed |
+
+## Cross-Axis Synthesis
+
+**<span style="background:#2b2350;color:#c4b5fd;padding:2px 9px;border-radius:5px;font-size:.82em;letter-spacing:.04em">AI-GENERATED</span>** *synthesis composed for this pack from the candidate's recurring threads across the journal*
+
+Five threads run across all six tasks, all traceable to the candidate's own reasoning:
+
+- **One source of truth, everything else derived.** The relational ledger entries are authoritative; `wallet.balance` (Task 1), the summary rollup (Task 2), the MongoDB and Neo4j stores (Task 4) are all rebuildable projections, never the financial source of truth. The same sentence appears in his Task 4 human direction and the Task 1 ADR 0001.
+- **Enforce by construction, not by hope.** Per-currency zero-sum, currency consistency, idempotency, and immutability are all schema-level guarantees (Task 1), and the observability layer (Task 5) just puts a panel on the guarantees the schema already exposes (the T10 reconciliation rule).
+- **Honesty about the PostgreSQL gap.** The candidate flags throughout that PostgreSQL is not his main stack; AI fills the PG-specific mechanics, and he marks those parts rather than claim them. This is why the deep query-plan analysis (Task 2), the migration internals (Task 3), and the metric names (Task 5) are AI-marked.
+- **Best tool for the job, proven not assumed.** Task 4 insists on a litmus that the fraud ring is genuinely a graph problem, and names the boundary where JSONB (not MongoDB) or Postgres (not Neo4j) is the right call.
+- **The entry split propagates.** Mapping the assessment's flat `transactions` onto `transaction` + `entry` (Task 1) is what turns the report into a join (Task 2) and places the migration on `entries` (Task 3); the tasks are not independent.
+
+## Local Sources
+
+The pack is self-contained. Primary sources are copied under [`./sources/`](./sources/): the design journal, introduction, and `CONTEXT.md` under `sources/journal/`, and each task's canonical deliverable doc under `sources/{axis}/`. SQL trees (`src/ddl/`, `src/mongo/`) are referenced by repo path rather than copied.
+
+_Reorganized: 2026-06-25. Source material: the committed `00-journal.md` and `docs/` of this report._
+
+</script>
+<script type="text/markdown" id="md-doc-00">
+# Introduction: candidate, method, and authorship model
+
+> Generated: 2026-06-25 | Axis: Overview | Primary sources: `00-introduction.md`, journal section 1
+
+This briefing pack reorganizes the VietPay DBA assessment by its six tasks. It adds no new analysis: it re-presents the design journal and the committed documentation, keeping the candidate's reasoning verbatim and marking every AI-assisted contribution, the same human / `<ai>` split the journal itself uses.
+
+> **Provenance key.** **<span style="background:#10363a;color:#5eead4;padding:2px 9px;border-radius:5px;font-size:.82em;letter-spacing:.04em">OWNED (Bùi Đức Trí)</span>** marks the candidate's own words, kept verbatim. **<span style="background:#2b2350;color:#c4b5fd;padding:2px 9px;border-radius:5px;font-size:.82em;letter-spacing:.04em">AI-GENERATED</span>** marks AI-assisted content, including this reorganization itself.
+
+## Who the candidate is, and how AI was used
+
+**<span style="background:#10363a;color:#5eead4;padding:2px 9px;border-radius:5px;font-size:.82em;letter-spacing:.04em">OWNED (Bùi Đức Trí)</span>** *verbatim, `00-introduction.md`*
+
+- My name is Bùi Đức Trí
+- My experience is composite of SQL Server (7+ years) and MongoDB (5 years)
+- My previous business domain do not related to fintech, but have a system that maintain customer assests and balance/transaction monitoring
+
+
+- I will use AI for:
+  - (1) research business context - this will help me to understand the business aspect related to fintech domain
+  - (2) research about existing tool that support current problem (for example: pgledger)
+  - (3) proofreeding and grammar/typo correcting
+  - (4) auditing
+  - (5) generation of pgSQL scripts and build up a prototype
+
+## The starting frame: business domain and tech stack
+
+**<span style="background:#10363a;color:#5eead4;padding:2px 9px;border-radius:5px;font-size:.82em;letter-spacing:.04em">OWNED (Bùi Đức Trí)</span>** *verbatim, journal section 1.1*
+
+The assessment asks us to design a core data layer for fintech payments. This raises 2 issues for me: (1) I do not have experience with fintech and its terminology, and (2) the main tech stack is PostgreSQL, which we are studying, and it is not my main experience stack.
+
+To cover our weaknesses here, we will utilize AI to help with the missing pieces. Then we will apply our previous knowledge about customer asset systems to resolve the given problem.
+
+## On using the journal audit
+
+**<span style="background:#10363a;color:#5eead4;padding:2px 9px;border-radius:5px;font-size:.82em;letter-spacing:.04em">OWNED (Bùi Đức Trí)</span>** *verbatim, journal section 1.3*
+
+The audit shows my lack of knowledge of PostgreSQL. This is good, it gives me a pointer on how to address my gap here. Most of the clarification is for things I already know or awareness of what I lack. Some of it is kind of a misunderstanding because my thought wording is not clear enough, not that I do not know about that part, but I kind of forgot to include it in the thought. It's good to know how to clarify the thought. The final part is what the AI already assumes, like settlement; I will ignore this because of my lack of domain knowledge and stick to the technical aspect of the task. Lack of knowledge is not a bad thing; relying on AI for what I don't know is bad.
+
+## How this pack marks authorship
+
+**<span style="background:#2b2350;color:#c4b5fd;padding:2px 9px;border-radius:5px;font-size:.82em;letter-spacing:.04em">AI-GENERATED</span>** *this reorganization, derived from the report `README.md` "A note on authorship"*
+
+The committed report already keeps authorship separable: the journal separates the candidate's reasoning from AI-assisted contributions inline (human feedback blocks vs `<ai>` markers); `CONTEXT.md` records standards as consensus decisions with trade-offs; each ADR carries a "Provenance" line; the AI-authored docs (`docs/query-performance.md`, `docs/observability.md`, `docs/audit-l3-mongodb.md`) are marked at their head; and `docs/ERD.md` / `docs/ERD.html` carry AI+/AI~ markers.
+
+This pack carries that split into the research format. Each of the six task docs tags every block with an OWNED pill (the candidate's verbatim words) or an AI-GENERATED pill (AI-assisted content, including the synthesis prose written for this pack). The full primary sources are copied under `sources/` so the pack is self-contained.
+
+## Sources
+
+[1] Candidate background and how AI was used - (local: sources/journal/00-introduction.md)
+[2] Design journal, section 1 (assessment analysis, first impressions, audit response) - (local: sources/journal/00-journal.md)
+[3] Domain glossary, invariants, status machine - (local: sources/journal/CONTEXT.md)
+
+</script>
+<script type="text/markdown" id="md-doc-01">
+# Task 1: Relational core model
+
+> Generated: 2026-06-25 | Axis: Relational core model | Primary sources: journal section 2, `docs/ERD.md`, `CONTEXT.md`, `src/ddl/`
+
+This axis reorganizes the existing Task 1 material: the candidate's entity reasoning from the journal, the AI ERD expansion/audit changelog, and the generated DDL. Owned text is verbatim; AI work is marked and pointed at its committed deliverable.
+
+> **Provenance key.** **<span style="background:#10363a;color:#5eead4;padding:2px 9px;border-radius:5px;font-size:.82em;letter-spacing:.04em">OWNED (Bùi Đức Trí)</span>** marks the candidate's own words, kept verbatim. **<span style="background:#2b2350;color:#c4b5fd;padding:2px 9px;border-radius:5px;font-size:.82em;letter-spacing:.04em">AI-GENERATED</span>** marks AI-assisted content. This mirrors the journal's own human / `<ai>` split.
+
+## TL;DR
+
+**<span style="background:#10363a;color:#5eead4;padding:2px 9px;border-radius:5px;font-size:.82em;letter-spacing:.04em">OWNED (Bùi Đức Trí)</span>** *verbatim, journal section 2.1*
+
+"But this transaction is not a real double-ledger transaction because it's double entries. So this **transaction** should be an **entry** in our model. So we expand the above **transaction** into 2 entities: **transaction** and **entry**. Each **transaction** has 2 **entries**, 1 `CREDIT` (+amount) and 1 `DEBIT` (-amount) that have a total sum of 0."
+
+---
+
+## Key Findings
+
+**<span style="background:#10363a;color:#5eead4;padding:2px 9px;border-radius:5px;font-size:.82em;letter-spacing:.04em">OWNED (Bùi Đức Trí)</span>** *the candidate's own words, verbatim quotes from journal section 2.1*
+
+- "Only a zero-sum transaction will COMMIT, so that our business requirement will be ensured."
+- "create multiple wallets that stay true to their currency. In this case, the above example will have to include at least 4 wallets: A1_VND, FX_VND (house exchange wallet), FX_USD, A2_USD."
+- "by enforcing unique on the key, we reject those requests that have an idempotency key already registered in the entity, and also map the request with the successful transaction."
+- "I personally don't want to use a trigger for auditing because it will duplicate the load on our main database, and we don't have information in case of ROLLBACK ... So I will let the application handle the audit log".
+- "Use fixed length number to represent money value, avoid floating point ... NUMERIC(19,4) for money value"; "ID will use UUID".
+
+**<span style="background:#2b2350;color:#c4b5fd;padding:2px 9px;border-radius:5px;font-size:.82em;letter-spacing:.04em">AI-GENERATED</span>** *the audit pass, full changelog in `docs/ERD.md` and journal section 2.1*
+
+- Closed the Task 1 "audit trail" gap with a Layer 2 in-Postgres `audit_log` (committed non-ledger state changes), keeping the rolled-back-attempt audit at Layer 3 (MongoDB).
+- Tightened zero-sum to **per currency** (a currency-blind total can be fooled by cross-cancelling imbalances), and enforced currency consistency by a composite FK `entries (wallet_id, currency) -> wallets`.
+- Generated the PostgreSQL DDL (eight entities + two reconciliation views + constraint/immutability triggers + least-privilege role), validated live on PostgreSQL 17.2.
+
+---
+
+## Detailed Analysis
+
+### Entities: explore and reasoning
+
+**<span style="background:#10363a;color:#5eead4;padding:2px 9px;border-radius:5px;font-size:.82em;letter-spacing:.04em">OWNED (Bùi Đức Trí)</span>** *verbatim, journal section 2.1 "Explore and reasoning"*
+
+We start with the `transactions` table as the starting point:
+
+```
+transactions(id, wallet_id, type, amount, currency, status, created_at)
+```
+
+A **transaction** targets a **wallet**, has attributes: _type_ (`DEBIT`, `CREDIT`), _amount_, _currency_, _status_ (`SETTLED`), _created\_at_.
+But this transaction is not a real double-ledger transaction because it's double entries. So this **transaction** should be an **entry** in our model. So we expand the above **transaction** into 2 entities: **transaction** and **entry**. Each **transaction** has 2 **entries**, 1 `CREDIT` (+amount) and 1 `DEBIT` (-amount) that have a total sum of 0.
+
+```
+[Transaction] ------- [Entry (CREDIT +)] --- [Wallet]
+                 |--- [Entry (DEBIT  -)] --- [Wallet]
+```
+
+To enforce the zero-sum requirement of the double-entry ledger, we can have a trigger that checks for mismatch of newly added entries, or simply just query and check within a transaction. Any DB transaction that failed the check must be ROLLBACK. Only a zero-sum transaction will COMMIT, so that our business requirement will be ensured. The DB transaction also covers other business requirements like sufficient balance, whitelist, blacklist, etc.
+
+From an **entry** point of view, the value of a **transaction** must be fixed and tied with the _currency_. In the case of a transaction between a VND wallet (A1) and a USD wallet (A2), the value is dependent on the exchange rate VND/USD and subject to changes. So we must derive a way to solve this. There are 2 solutions:
+ - (1) decide a base currency and convert all transaction value into the base currency. This solution works well in a customer assets system but not in our case of a payment platform.
+ - (2) create multiple wallets that stay true to their currency. In this case, the above example will have to include at least 4 wallets: A1_VND, FX_VND (house exchange wallet), FX_USD, A2_USD. The transaction then has 4 entries: (E1/2) transfer VND amount from A1_VND to FX_VND, (E3/4) transfer USD amount from FX_USD to A2_USD. This way the zero-sum requirement will be kept.
+
+I will go with option (2), so we have multiple **wallets** that a **transaction** with appropriate currency will target and an **account** will have multiple **wallets** that serve for multiple currencies. We also can use this pattern to have holding wallets, which are for transfers that are being processed by external processes.
+
+```
+[Account] ------- [Wallet (USD)]
+             |--- [Wallet Holding (USD)]
+             |--- [Wallet (VND)]
+             |--- [Wallet Holding (VND)]
+```
+
+For idempotent keys, the point of having them is to prevent duplication handling of a transaction, which means it always guarantees that a transaction request is only handled once. If a service accidentally retries or sends the same transaction request, the transaction is not duplicated. We can integrate this by having the **idempotency_key** entity that tracks the unique idempotency key, by enforcing unique on the key, we reject those requests that have an idempotency key already registered in the entity, and also map the request with the successful transaction. The idempotent key registration will be included in the DB transaction, so only a successful DB transaction will commit and the idempotent key will exist after COMMIT.
+
+```
+[Idempotency Key] ------ [Transaction]
+```
+
+For audit logging, I personally don't want to use a trigger for auditing because it will duplicate the load on our main database, and we don't have information in case of ROLLBACK because the trigger will handle inside the transaction and being rolled back too. So I will let the application handle the audit log, which sends the log with request idempotent key, transaction id, and if the DB rolls back, we still have information about that too. We can then offload the audit to an appropriate DBMS like MongoDB or just another PostgreSQL instance. There might be DBMS level that record audit, we need to have research on this.
+
+After research, it seems like we don't have a clear answer on the compliance aspect, so we will introduce both trigger audit and external audit as a separate section for our final delivery. And as AI suggests in research, audit is not just recording transactions, it's for all other modifications on all of our entities.
+
+There are some edge cases that I am thinking about:
+- External process that holds the transaction in between state. This is where the holding wallet comes from, but the more I think about it, the more unclear it becomes to be integrated into our core system. This problem needs a more thorough analysis so I will skip them, there is no time. We just accept that the higher level transaction will be managed elsewhere, then if that transaction is invalid and needs to roll back, we add a new transaction to move money from holding back to the original wallet.
+
+### Expanding the ERD: attributes and data-type standards
+
+**<span style="background:#10363a;color:#5eead4;padding:2px 9px;border-radius:5px;font-size:.82em;letter-spacing:.04em">OWNED (Bùi Đức Trí)</span>** *verbatim, journal section 2.1 "Expand the base ERD to have more information"*
+
+My core ERD only has base relationships, now we need to expand them to serve as real business mapping. Trivial fields like created_at, updated_at, etc. will not be mentioned unless necessary.
+
+Since the ERD suggests we design datatype too, here are some rules that need to be followed:
+- Use fixed length number to represent money value, avoid floating point; usually 4 decimal number is enough so we can use NUMERIC(19,4) for money value
+- ID will use UUID, we can design it as fixed CHAR(n) or TEXT but since no specification, we keep UUID.
+
+---
+
+*The per-entity attribute lists the candidate wrote for account, wallet, transaction, entry, idempotency_key, exchange_rate, and currency are in journal section 2.1 and are realized in [`docs/ERD.md`](sources/01-relational-core-model/ERD.md).*
+
+### ERD generation and the AI expansion/audit
+
+**<span style="background:#2b2350;color:#c4b5fd;padding:2px 9px;border-radius:5px;font-size:.82em;letter-spacing:.04em">AI-GENERATED</span>** *verbatim, the `<ai>` blocks in journal section 2.1; full model in `docs/ERD.md`*
+
+The ERD lives in two forms: [`docs/ERD.md`](sources/01-relational-core-model/ERD.md) (Mermaid diagram, entity tables, and the integrity rules) and `docs/ERD.html` (standalone visual artifact). It draws exactly the entities reasoned through above: account, wallet (including holding wallets), transaction, entry, and idempotency key, plus the zero-sum and idempotency rules.
+
+After the base ERD, the AI expanded and audited the model against the fintech research and the assessment task. Every change was listed and approved one by one. In `docs/ERD.md` (footnotes) and `docs/ERD.html` (colour + badge) the markers are **AI-added** (`[^ai]`, violet `AI+`) and **AI-revised** (`[^air]`, violet `AI~`). The changelog (journal section 2.1) covers: T1 the Layer 2 `audit_log`; T2 per-currency zero-sum; T3 positive-amount encoding; T4 dropping `entry.status` and adding immutability; T5 the chart of accounts; T6 idempotency scoped to `(caller_id, key)`; T7 the FX-rate pinning; T8 currency consistency by composite FK; T9 the partitioning physical note; T10 the reconciliation rule. Several of these were corrected or reframed by the candidate's feedback, recorded verbatim below.
+
+### Candidate feedback on the AI audit (owned, the human side of the split)
+
+> **Human feedback (Bùi Đức Trí), on T3:** A `CHECK` constraint can already prevent the `type`/sign disagreement in the signed model, for example `CHECK ((type='CREDIT' AND amount>0) OR (type='DEBIT' AND amount<0))`. So T3 is **not** a safety fix: all three encodings (signed only; signed + CHECK; positive amount + `type`) are equally correct. Which one is "better" depends on team consensus and coding standards, not on objective correctness. I chose (c) for this design, and it should be recorded as a standards decision, not a bug fix.
+
+> **Human feedback (Bùi Đức Trí), on T5:** An account holds both a normal wallet and a holding wallet (per currency); the holding wallet temporarily holds that account's balance while an external flow processes it. So "holding" is a wallet-level kind, not an account-level role, and a platform `SUSPENSE` account is the wrong abstraction here. The account role and the regular/holding distinction are orthogonal: role on `account.type`, spendable-vs-held on `wallet.kind`.
+
+> **Human feedback (Bùi Đức Trí), on T6:** If the idempotency key is claimed inside the business transaction, a rollback releases it, and PostgreSQL crash-recovery rolls back any uncommitted transaction on restart, so a crash leaves no partial state. For a single atomic posting there is therefore no in-between state to recover, and `recovery_point`/`locked_at` have no role. They are valid only for a different design, a multi-step transaction whose steps commit separately (with non-rollback-able external calls between them), which is out of scope here and a separate redesign per the business flow. `expires_at` is worth keeping for a cleanup/watchdog process.
+
+> **Human feedback (Bùi Đức Trí), on T7:** `exchange_rate_id` references the exact rate record at a point in time, not the latest rate, so the reference already pins the rate. The exchange value (amount x rate) is derivable from that record, i.e. duplicated, so I deliberately keep it in `extra_info` rather than as a normalized column. No typed `fx_rate` column is needed.
+
+> **Human feedback (Bùi Đức Trí), on T9:** Keep the ERD logical first, but note what is going on. Surfaced the trade-off: a composite PK `(entry_id, created_at)` no longer makes `entry_id` unique on its own (the same id could repeat across partitions), and a plain secondary index on `wallet_id` does not need `created_at` (only UNIQUE/PK must include the partition key).
+
+> **Human feedback (Bùi Đức Trí):** `audit_log` audits all entities, so a single drawn line to `transaction` is misleading (it reads as if it only relates to transactions), and drawing a line to every entity makes the ERD messy. Detach it: show it as a standalone entity with no relationship lines.
+
+### DDL generation and deployment
+
+**<span style="background:#2b2350;color:#c4b5fd;padding:2px 9px;border-radius:5px;font-size:.82em;letter-spacing:.04em">AI-GENERATED</span>** *verbatim, the `<ai>` block in journal section 2.2; deliverable in `src/ddl/`*
+
+From the audited `docs/ERD.md` I generated the PostgreSQL DDL and packaged it as a one-time, rollbackable deployment under `src/ddl/`. The schema is the eight ERD entities (`currencies`, `exchange_rates`, `accounts`, `wallets`, `transactions`, `entries`, `idempotency_keys`, `audit_logs`) plus two reconciliation views, the per-currency zero-sum constraint trigger, the immutability triggers, and a least-privilege application role. Each guarantee is enforced by the schema, not by the application: per-currency zero-sum by a `DEFERRABLE INITIALLY DEFERRED` constraint trigger; currency consistency by the composite FK `entries (wallet_id, currency) -> wallets` against its `UNIQUE (wallet_id, currency)` target; idempotency by `UNIQUE (caller_id, key)`; immutability by `REVOKE` plus a deny trigger on `entries` and `audit_logs`; and the derived `wallets.balance` reconciled against `SUM(entries)` by the `balance_audit` view.
+
+Structure: `src/ddl/initial/` holds twelve ordered steps, each an `NN_name.up.sql` with a matching `.down.sql`; `deploy.sh` is a small psql runner; `test/smoke_test.sql` is an executable spec that posts a balanced transfer and the four-entry FX bridge, then asserts the unbalanced, duplicate, immutable, currency-mismatch, and non-positive cases are all rejected. The scripts were authored against PostgreSQL 14+, validated offline with the real PostgreSQL parser (pglast), then run live against a provided PostgreSQL 17.2. The full lifecycle up -> verify -> test -> down -> re-up passes.
+
+> **Human direction (Bùi Đức Trí):** Table names are plural (`accounts`, `entries`, ...), while the ERD keeps the singular entity names; this is a naming standard, not a correctness change. The one-time baseline lives in its own `initial/` folder, kept separate from later incremental deployment steps. A deployment-state table is required so that an accidental redeploy cannot break anything. The scripts were written first; PostgreSQL and a client were provided afterward to test them.
+
+## Open Questions
+
+*Deferred items, summarized from journal section 2.1 and `docs/ERD.md`. The candidate's verbatim is quoted.*
+
+- The holding-wallet / external-process edge case: "This problem needs a more thorough analysis so I will skip them, there is no time." In-flight money is handled by per-account holding wallets; a fuller in-between-state model is deferred.
+- Normalizing the `currency` string on `wallet`/`entry` onto the `currency` lookup is deferred (`docs/ERD.md`).
+
+## Sources
+
+[1] Design journal, section 2 (candidate's reasoning + interleaved AI changelog), verbatim - (local: sources/journal/00-journal.md)
+[2] ER diagram, the audited model with AI+/AI~ markers - (local: sources/01-relational-core-model/ERD.md)
+[3] Domain glossary, invariants, status machine - (local: sources/journal/CONTEXT.md)
+[4] Task 1 DDL: 12-step up/down runner, smoke test - `src/ddl/` (repo)
+
+</script>
+<script type="text/markdown" id="md-doc-02">
+# Task 2: Query and Performance: the settlement report
+
+> Generated: 2026-06-25 | Axis: Query and performance | Primary sources: journal section 1.2 and 3, `docs/query-performance.md`, `src/ddl/perf/`
+
+This axis reorganizes the existing Task 2 material. Nothing here is new analysis: the candidate's reasoning is lifted verbatim from the design journal, and the AI-authored query-plan study is the committed `docs/query-performance.md`. Each block below is tagged with who wrote it.
+
+> **Provenance key.** **<span style="background:#10363a;color:#5eead4;padding:2px 9px;border-radius:5px;font-size:.82em;letter-spacing:.04em">OWNED (Bùi Đức Trí)</span>** marks the candidate's own words, kept verbatim. **<span style="background:#2b2350;color:#c4b5fd;padding:2px 9px;border-radius:5px;font-size:.82em;letter-spacing:.04em">AI-GENERATED</span>** marks AI-assisted content (the empirical plan analysis and any composed summary). This mirrors the journal's own human / `<ai>` split.
+
+## TL;DR
+
+**<span style="background:#10363a;color:#5eead4;padding:2px 9px;border-radius:5px;font-size:.82em;letter-spacing:.04em">OWNED (Bùi Đức Trí)</span>** *verbatim, journal section 3 and 3.2*
+
+"The direction was there, but I do not have extensive PostgreSQL experience yet, so my own contribution to this section is the reasoning and the DDL changes for partitioning. The deep query-plan analysis is AI-generated." "So the report is now a JOIN of `entries` to `transactions`. ... That leaves exactly two honest options: optimise the join, or redirect to a pre-aggregated summary table. I wanted both, as I already hinted in Section 1.2."
+
+---
+
+## Key Findings
+
+**<span style="background:#10363a;color:#5eead4;padding:2px 9px;border-radius:5px;font-size:.82em;letter-spacing:.04em">OWNED (Bùi Đức Trí)</span>** *the candidate's own words, verbatim quotes from journal section 1.2 and 3*
+
+- "Partition(created_at) & IX(wallet_id) : This is the best pattern because a range query by month will only touch the needed partition, including the index, so we can have the best of both worlds here: range query for only needed tuples + pre-order on wallet_id to skip sorting entirely."
+- "The three index options I sketched in Section 1.2 are **stale**. They all assumed those columns sat on one table. After the split they do not hold unchanged, so I rebuilt the index thinking from the join".
+- "The optimised join is the primary deliverable; a summary table is the complementary layer for the cold historical months that never change."
+- "`transactions` stays unpartitioned but indexed, because it is an FK target ... `entries` is safe to partition precisely because it is a leaf (nothing references it)."
+
+**<span style="background:#2b2350;color:#c4b5fd;padding:2px 9px;border-radius:5px;font-size:.82em;letter-spacing:.04em">AI-GENERATED</span>** *headline numbers, `docs/query-performance.md` (real `EXPLAIN (ANALYZE, BUFFERS)` on PostgreSQL 17.2)*
+
+- Flat baseline to partitioned + covering index: shared-buffer reads about 68,300 to about 2,570 (about 26x fewer), execution about 1,183 ms to about 477 ms.
+- The plan flips on two markers: the entries scan prunes to one monthly partition, and the header side becomes an `Index Only Scan` with `Heap Fetches: 0`.
+- Index cost: the covering partial index is about 66 MB at this scale and indexes only the about 85% SETTLED rows.
+
+---
+
+## Detailed Analysis
+
+### The query has to change: the entry split turned it into a join
+
+**<span style="background:#10363a;color:#5eead4;padding:2px 9px;border-radius:5px;font-size:.82em;letter-spacing:.04em">OWNED (Bùi Đức Trí)</span>** *verbatim, journal section 3.1*
+
+In Section 1.2 the query lived on one flat `transactions` table, so `status`, `wallet_id`, `amount`, `currency`, and `created_at` were all on one row. Task 1 split that: the money columns moved to `entries` (immutable, append-only, the table I want to partition), and `status` stayed on the `transactions` header (mutable, it flips `PENDING -> SETTLED` later). So the report is now a JOIN of `entries` to `transactions`.
+
+Two consequences I had to face honestly:
+
+- The three index options I sketched in Section 1.2 are **stale**. They all assumed those columns sat on one table. After the split they do not hold unchanged, so I rebuilt the index thinking from the join rather than porting them over.
+- I cannot dodge the join by denormalizing `status` back onto `entries`. Entries are immutable (`REVOKE UPDATE` plus a deny trigger), and a transaction settles *after* its entries are written (the smoke test posts entries while the transaction is still `PENDING`). So a mutable `status` cannot live on an immutable row. That leaves exactly two honest options: optimise the join, or redirect to a pre-aggregated summary table. I wanted both, as I already hinted in Section 1.2.
+
+### Decisions (grill session)
+
+**<span style="background:#10363a;color:#5eead4;padding:2px 9px;border-radius:5px;font-size:.82em;letter-spacing:.04em">OWNED (Bùi Đức Trí)</span>** *verbatim, journal section 3.2*
+
+I had the AI grill me on the open forks before building. What I settled:
+
+- **Both solutions.** The optimised join is the primary deliverable; a summary table is the complementary layer for the cold historical months that never change. The assessment asks to "provide the improved query and the supporting indexes and/or partitioning strategy", so the query optimised in place is the thing it wants; the summary table is the second layer.
+- **Posting-month semantics.** The window filters `entries.created_at` (posting time), which is the faithful reading of the original single-timestamp query. "Settled *during* month M" (when settlement lags across a month boundary) is a different question; we do not even have a `settled_at` column, and the business meaning of the window is out of scope. This is a tuning exercise.
+- **Partition only `entries`, by modifying the initial script.** Not a separate expansion phase. `transactions` stays unpartitioned but indexed, because it is an FK target (`entries`, `audit_logs`, `idempotency_keys` all reference `transactions(transaction_id)`); partitioning it would force its PK to `(transaction_id, created_at)` and break those FKs. `entries` is safe to partition precisely because it is a leaf (nothing references it). The online conversion of an already-populated table is the "expansion" I deferred: it needs more reasoning and is a Task-3-style migration, not this.
+- **Empirical, AI-authored.** Seed a few million rows in a throwaway schema on the provided PostgreSQL 17.2 and read the real plans. The write-up is AI's.
+
+### The DDL changes
+
+**<span style="background:#10363a;color:#5eead4;padding:2px 9px;border-radius:5px;font-size:.82em;letter-spacing:.04em">OWNED (Bùi Đức Trí)</span>** *verbatim, journal section 3.3*
+
+What changed in the baseline (the empty/greenfield case):
+
+- **`initial/07_entry`**: `entries` is now `PARTITION BY RANGE (created_at)` with the composite PK `(entry_id, created_at)` (PostgreSQL requires the partition key in the PK). A `create_entries_partition()` helper builds one month idempotently; the baseline calls it over a deterministic window plus a DEFAULT partition safety net. The existing local indexes are kept (they serve joins and per-wallet dashboards, not the report, which needs no entries index).
+- **`initial/06_transaction`**: added a covering partial index `transactions (created_at) INCLUDE (transaction_id) WHERE status = 'SETTLED'`. The benchmark showed this turns the header side of the join into an index-only scan with zero heap fetches.
+- **`initial/11_immutability`**: partitioning opened a subtle gap. Row-level UPDATE/DELETE deny triggers clone to partitions automatically, but the statement-level TRUNCATE trigger only sits on the parent, so a direct `TRUNCATE entries_pYYYYMM` would slip past it. The app role can never TRUNCATE (no privilege, and partitions grant it nothing), so the guarantee holds, but I closed the defence-in-depth gap by attaching the TRUNCATE guard to every partition (and the helper attaches it to future ones).
+
+Validated end to end on the provided PostgreSQL 17.2: a full `down-to 05` then `up` redeploy, `verify`, and the smoke test all pass against the partitioned `entries`; the `now()`-dated inserts route into the right partition; and the deferred per-currency zero-sum constraint trigger still fires on the partitions.
+
+### The complementary summary rollup
+
+**<span style="background:#10363a;color:#5eead4;padding:2px 9px;border-radius:5px;font-size:.82em;letter-spacing:.04em">OWNED (Bùi Đức Trí)</span>** *verbatim, journal section 3.4*
+
+`src/ddl/perf/summary_rollup.sql` adds `wallet_monthly_settlement`, a per-`(month, wallet, currency)` rollup, with `refresh_wallet_monthly_settlement()` to recompute one month from the ledger. A frozen month never changes, so it is computed once after the month closes; thereafter a cold-month report is a single PK range scan instead of the live join. Routing: current month uses the live query, earlier months read the rollup. Like `wallets.balance`, it is a derived cache, never the source of truth.
+
+### Empirical performance analysis
+
+**<span style="background:#2b2350;color:#c4b5fd;padding:2px 9px;border-radius:5px;font-size:.82em;letter-spacing:.04em">AI-GENERATED</span>** *verbatim, the `<ai>` block in journal section 3.4; full walk-through in `docs/query-performance.md`*
+
+Full plan walk-through with the real `EXPLAIN (ANALYZE, BUFFERS)` output is in [`docs/query-performance.md`](sources/02-query-and-performance/query-performance.md); the reproducible harness is `src/ddl/perf/bench.sql`. Headline, on a ~4M-entry seed on PostgreSQL 17.2:
+
+- **Flat baseline -> partitioned + covering index:** shared-buffer reads ~68,300 -> ~2,570 (about 26x fewer, both at a reporting `work_mem` so neither aggregate spills), execution ~1,183 ms -> ~477 ms. The plan flips on two markers: the entries scan prunes to one monthly partition (53,223 -> 2,222 buffers), and the header side becomes an `Index Only Scan` on the new covering partial index with `Heap Fetches: 0` (the ~14k-buffer heap fetch disappears). The rewrite is result-preserving: flat and partitioned both return the identical 124,739 groups.
+- **The redundant `t.created_at` predicate matters:** without it the planner cannot restrict the header to the month, so it scans all 2M transactions for `status='SETTLED'`. Pushing it on (safe: entry and header share the posting commit time) lets the header seek the index.
+- **Remaining cost is the aggregate, not the scan:** the `GROUP BY` over ~125k groups spills at the server's default 4 MB `work_mem` (~540 ms, ~6,400 temp blocks); a higher reporting `work_mem` removes the spill (no schema change). So counting all I/O at the default it is ~7.6x; at a matched `work_mem` where neither side spills it is the ~26x shared-buffer-reads figure. The data-access win (pruning + index-only header) is real either way.
+- **Index cost:** the covering partial index is ~66 MB at this scale and indexes only the ~85% SETTLED rows; a PENDING/REVERSED row enters it only when it settles. Measured write overhead: a 1M-row bulk header insert went ~5.6 s -> ~9.1 s with the index present (~3.5 us/row; a marginal cost on top of the existing PK + created_at index, and posting is one row at a time). Partitioning also makes per-partition B-trees smaller and old months cheap to `DETACH`/`VACUUM` (the hot/archive idea from Section 1.2).
+- **Summary rollup:** ~2.9 s to refresh one month once; thereafter a cold-month report is ~40 ms (a PK range scan), versus ~540 ms for the live join.
+
+The committed query, after normalisation, and the supporting index:
+
+```sql
+SELECT e.wallet_id, e.currency, SUM(e.amount) AS settled_total
+FROM entries e
+JOIN transactions t ON t.transaction_id = e.transaction_id
+WHERE t.status = 'SETTLED'
+  AND e.created_at >= :m_start AND e.created_at < :m_end
+  AND t.created_at >= :m_start AND t.created_at < :m_end   -- redundant; lets the header seek the index
+GROUP BY e.wallet_id, e.currency;
+```
+
+---
+
+### Human direction
+
+> **Human direction (Bùi Đức Trí):** Keep it simple: target only `entries`, and modify the initial script rather than building a separate expansion phase. The online conversion of a populated table is deferred; it needs more reasoning. I want both the optimised join and the summary table introduced here. And make it clear that the deep performance analysis is the AI's work, not my own.
+
+## Open Questions
+
+*Deferred items, summarized from journal section 3 and `docs/query-performance.md` section 7.*
+
+- **Online conversion deferred.** PostgreSQL cannot convert a populated plain table to partitioned in place; doing it on a live 50M-row table is a separate online migration (create the partitioned parent, backfill, attach, swap, Task-3-style expand/contract). The baseline here creates `entries` partitioned from the start; the live conversion needs its own plan.
+- **Posting-month semantics.** The window filters `entries.created_at` (posting time). "Settled *during* month M" is a different question, out of scope here: there is no `settled_at` column.
+
+## Sources
+
+[1] Design journal, section 1.2 and 3 (candidate's reasoning, verbatim) - (local: sources/journal/00-journal.md)
+[2] Task 2 query-plan analysis, AI-authored - (local: sources/02-query-and-performance/query-performance.md)
+[3] Task 2 SQL: optimised query, rollup, benchmark - `src/ddl/perf/` (repo)
+[4] Partitioning DDL - `src/ddl/initial/07_entry.up.sql`, covering index `src/ddl/initial/06_transaction.up.sql` (repo)
+
+</script>
+<script type="text/markdown" id="md-doc-03">
+# Task 3: Zero-downtime migration
+
+> Generated: 2026-06-25 | Axis: Zero-downtime migration | Primary sources: journal section 4, `src/ddl/migrations/001_settlement_batch_id/`
+
+This axis reorganizes the existing Task 3 material: the candidate's deployment-planning reasoning from the journal, and the AI-built, PostgreSQL-specific expand-contract migration with per-phase rollback. Owned text is verbatim; AI work is marked and pointed at its committed runbook.
+
+> **Provenance key.** **<span style="background:#10363a;color:#5eead4;padding:2px 9px;border-radius:5px;font-size:.82em;letter-spacing:.04em">OWNED (Bùi Đức Trí)</span>** marks the candidate's own words, kept verbatim. **<span style="background:#2b2350;color:#c4b5fd;padding:2px 9px;border-radius:5px;font-size:.82em;letter-spacing:.04em">AI-GENERATED</span>** marks AI-assisted content. This mirrors the journal's own human / `<ai>` split.
+
+## TL;DR
+
+**<span style="background:#10363a;color:#5eead4;padding:2px 9px;border-radius:5px;font-size:.82em;letter-spacing:.04em">OWNED (Bùi Đức Trí)</span>** *verbatim, journal section 4*
+
+"The column name `settlement_batch_id` is just an example, so this task is really about deployment planning. I treat the column as a vehicle for a zero-downtime DDL change and keep its business meaning out of scope". "This is the right shape. PostgreSQL has its own internals, so I had AI turn this sketch into a concrete, tested PostgreSQL expand-contract migration following the direction above."
+
+---
+
+## Key Findings
+
+**<span style="background:#10363a;color:#5eead4;padding:2px 9px;border-radius:5px;font-size:.82em;letter-spacing:.04em">OWNED (Bùi Đức Trí)</span>** *the candidate's own words, verbatim quotes from journal section 1.2 and 4*
+
+- "So I can safely skip the business aspect of the column and focus on deployment steps only."
+- "In the worst case scenario I have observed, a schema change took 2 hours to run then failed, and took more than 3 hours to rollback due to cascaded effect on transaction log and bottleneck on disk IO, which almost brought the instance down."
+- "This is the right shape."
+- "Usually, I want database deployment to be as independent as possible. So the best way is to have a 3-stage deployment".
+
+**<span style="background:#2b2350;color:#c4b5fd;padding:2px 9px;border-radius:5px;font-size:.82em;letter-spacing:.04em">AI-GENERATED</span>** *the realized migration, full runbook in `src/ddl/migrations/001_settlement_batch_id/README.md`*
+
+- The genuinely blocking operation is the later `SET NOT NULL`; the fast path (`CHECK ... NOT VALID` -> `VALIDATE` -> `SET NOT NULL`) was **measured on 2,000,000 rows**: 1.4 ms versus 581 ms naive.
+- The append-only collision is the core of the answer: the backfill temporarily disables the immutability trigger while the privilege `REVOKE` still protects the app.
+- `entries` is partitioned, which changes the mechanics (no `NOT VALID` FK on a partitioned parent; `CREATE INDEX CONCURRENTLY` per partition; `ctid` unique only per partition; backfill partition by partition).
+
+---
+
+## Detailed Analysis
+
+### The deployment-planning frame and the naive command
+
+**<span style="background:#10363a;color:#5eead4;padding:2px 9px;border-radius:5px;font-size:.82em;letter-spacing:.04em">OWNED (Bùi Đức Trí)</span>** *verbatim, journal section 4*
+
+We will use the example in the task requirement to demonstrate the expansion. The column name `settlement_batch_id` is just an example, so this task is really about deployment planning. I treat the column as a vehicle for a zero-downtime DDL change and keep its business meaning out of scope (history is backfilled to a sentinel batch, see below).
+
+The goal is to add the column `settlement_batch_id` with constraint `NOT NULL`. For most RDBMS, we can achieve this using a single command
+
+```
+# populate full working command here as pgsql syntax
+ALTER TABLE entries ADD COLUMN settlement_batch_id NOT NULL
+```
+
+This works for small AND infrequent access table, since schema changes must put exclusive lock on the table, and block almost all other operations. This is risky, so in production, we avoid this change as much as possible, unless reach consensus about downtime, and thorough testing the time needed for the task to ensure maintenance windows not need to extend past planning. Also the biggest risk is transaction rollback. The more it holds locks, the effect on transaction log will be bigger. In the worst case scenario I have observed, a schema change took 2 hours to run then failed, and took more than 3 hours to rollback due to cascaded effect on transaction log and bottleneck on disk IO, which almost brought the instance down. Luckily the instance is the testing one so we avoided a big mistake there.
+
+### The SQL Server shape that carries over
+
+**<span style="background:#10363a;color:#5eead4;padding:2px 9px;border-radius:5px;font-size:.82em;letter-spacing:.04em">OWNED (Bùi Đức Trí)</span>** *verbatim, journal section 4*
+
+Since we want zero-downtime, the approach has to be changed. In SQL Server, we split the changes into 3 parts:
+- (1) ADD COLUMN with NULL and DEFAULT: this still holds lock, but the change is metadata only, so even though still have locking, it should be quick and rollback is trivial, new data will have default value so that old queries do not insert NULL for new data
+- (2) Run script to populate data, either default or computed, we can decide as per specification
+- (3) Run check to ensure all data is not NULL
+- (4) ALTER COLUMN with NOT NULL
+- (5) Working with application side to ensure new versions are deployed. We can then remove DEFAULT if not needed.
+
+This is the right shape. PostgreSQL has its own internals, so I had AI turn this sketch into a concrete, tested PostgreSQL expand-contract migration following the direction above.
+
+### PostgreSQL specifics that reframe the cost
+
+**<span style="background:#2b2350;color:#c4b5fd;padding:2px 9px;border-radius:5px;font-size:.82em;letter-spacing:.04em">AI-GENERATED</span>** *verbatim, the `<ai>` correction block in journal section 4*
+
+Two things differ from the SQL Server intuition and reframe where the cost is:
+
+- The command as written fails: `ADD COLUMN ... NOT NULL` with **no default** errors on a non-empty table (existing rows would violate NOT NULL). The runnable single command is `ALTER TABLE entries ADD COLUMN settlement_batch_id UUID NOT NULL DEFAULT '<constant>'`.
+- In PostgreSQL 11+ that command does NOT rewrite the table: a constant default is stored once in the catalog, so the add is metadata only and fast even on 50M rows. So it is not the table-rewrite disaster older engines suffer. It still takes a brief `ACCESS EXCLUSIVE` lock, which under load can queue behind a long statement and block everything behind it.
+
+The real reason the single command does not fit is the value, not the lock: a settlement batch is **per row**, not one constant for all history, so the value must be **backfilled**, not defaulted. And the genuinely blocking operation is the later `SET NOT NULL`, which by default scans the whole table under `ACCESS EXCLUSIVE`. That scan is the outage we design around. This is exactly why a per-row value needs expand-contract.
+
+### The realized migration (five phases, per-phase rollback)
+
+**<span style="background:#2b2350;color:#c4b5fd;padding:2px 9px;border-radius:5px;font-size:.82em;letter-spacing:.04em">AI-GENERATED</span>** *verbatim, the `<ai>` deliverable block in journal section 4; full runbook in `src/ddl/migrations/001_settlement_batch_id/README.md`*
+
+`src/ddl/migrations/001_settlement_batch_id/` (separate from the `initial/` baseline, because an expand-contract migration is gated by application deploys and is a human-driven runbook, not a single automated `up`). Five ordered, individually reversible steps plus a runbook `README.md`:
+
+```
+01_expand        ADD nullable column (+ settlement_batches parent + sentinel)
+02_backfill      disable immutability, fill history partition-by-partition (committed batches)
+03_restore_immutability   re-enable + verify the deny trigger everywhere
+04_index         online index (partitioned pattern)
+05_promote       CHECK NOT VALID -> VALIDATE -> SET NOT NULL
+```
+
+The changelog of what the PostgreSQL reality forced (full text in the journal and the migration README):
+
+- **T1 Target table `entries`, not `transactions`.** The assessment's flat 50M-row "transactions" table is what Task 1 split; the 50M rows live in `entries`.
+- **T2 The append-only collision (the core of the answer).** `entries` is immutable by Invariant 3, enforced by `REVOKE UPDATE` **and** a `deny_mutation` trigger. A NOT NULL backfill must UPDATE every historical row, which both forbid. So the backfill, run by the OWNER/DBA, must **temporarily disable** `trg_entries_immutable` for the backfill window. The payoff: while the trigger is off, the privilege `REVOKE` still holds, so the application still cannot rewrite history during the window.
+- **T3 `entries` is partitioned, which changes the mechanics.** A partitioned table rejects a `NOT VALID` foreign key; `CREATE INDEX CONCURRENTLY` is illegal on a partitioned parent (so build `ON ONLY` + CIC per partition + `ATTACH`); `ctid` is unique only within one partition (so backfill runs partition by partition); `DISABLE TRIGGER` on the parent cascades to partitions in PG 15+ but not PG 14 (so loop every partition, version-safe).
+- **T4 The SET NOT NULL fast path (PG 12+), measured.** Step 05 adds `CHECK (col IS NOT NULL) NOT VALID` (instant), `VALIDATE CONSTRAINT` (SHARE UPDATE EXCLUSIVE, reads and writes continue), then `SET NOT NULL` (fast, the planner trusts the validated CHECK and skips the scan). Measured on 2,000,000 rows: the fast-path `SET NOT NULL` took **1.4 ms** versus **581 ms** for a naive `SET NOT NULL`.
+- **T5 Dual-write window and old-vs-new read shape.** Expand adds the column NULLABLE. App `vN+1` then dual-writes the column on every INSERT but **still reads the old shape**. Only after promote does app `vN+2` read/require the new shape. So the application reads the OLD shape from expand through promote, and the NEW shape only after the column is NOT NULL and every row has a value.
+- **T6 Rollback at each phase, and the asymmetry.** Once the column is NOT NULL, an app version that does not write it fails every INSERT, so to unwind past the dual-write app you must `DROP NOT NULL` (05.down) **before** reverting the app. Always relax the constraint before reverting the writer.
+- **T7 Idempotency and lock safety.** Every up step re-runs cleanly (catalog guards, `IF NOT EXISTS`, `WHERE ... IS NULL` backfill). Every brief `ACCESS EXCLUSIVE` operation runs under a short `lock_timeout` with a bounded retry, so it cannot pile up behind a long statement under load.
+
+The whole lifecycle was validated end to end against the provided PostgreSQL 17.2, in an isolated schema: up through promote, idempotent re-runs, per-phase rollback, and full teardown.
+
+### When the application reads the old vs new shape
+
+**<span style="background:#2b2350;color:#c4b5fd;padding:2px 9px;border-radius:5px;font-size:.82em;letter-spacing:.04em">AI-GENERATED</span>** *from the migration README*
+
+| Window | App version | Writes the column? | Reads/requires the column? | Column constraint |
+|---|---|---|---|---|
+| before step 1 | `vN` | no | no | absent |
+| steps 1 -> 7 | `vN+1` (dual-write) | yes (new rows) | **no, still OLD shape** | NULLABLE |
+| after step 8 | `vN+2` (contract) | yes | **yes, NEW shape** | `NOT NULL` |
+
+### Human direction
+
+> **Human direction (Bùi Đức Trí):** The column goes on `entries`, not on a `transactions` header. We already mapped the assessment's original flat "transactions" table onto the `entry` entity in Task 1, so `entries` is the live 50M-row table the requirement is talking about. The immutability collision that this creates is not a reason to move the column off `entries`; it is part of the answer, handled by an audited, privileged disable of the deny trigger for the backfill window, with the privilege REVOKE still protecting the application.
+
+## Open Questions
+
+**<span style="background:#2b2350;color:#c4b5fd;padding:2px 9px;border-radius:5px;font-size:.82em;letter-spacing:.04em">AI-GENERATED</span>** *from the migration README "Foreign key on a partitioned table"*
+
+- The foreign key to `settlement_batches` is intentionally left as a team decision: a partitioned table rejects a `NOT VALID` FK, so the options are a validated FK in a maintenance window, a per-partition `NOT VALID` + `VALIDATE`, or app-enforced (common for large partitioned fact tables). The Task 3 requirement is the `NOT NULL` column; the FK is a separate decision.
+
+## Sources
+
+[1] Design journal, section 4 (candidate's reasoning + interleaved AI changelog), verbatim - (local: sources/journal/00-journal.md)
+[2] Task 3 expand-contract migration runbook, AI-built - (local: sources/03-zero-downtime-migration/migration-runbook.md)
+[3] Task 3 migration scripts: 5 phases, each with `.down.sql` - `src/ddl/migrations/001_settlement_batch_id/` (repo)
+
+</script>
+<script type="text/markdown" id="md-doc-04">
+# Task 4: Polyglot modelling
+
+> Generated: 2026-06-25 | Axis: Polyglot modelling (MongoDB + Neo4j) | Primary sources: journal section 5, `docs/audit-l3-mongodb.md`, `src/mongo/create_activity_audit.js`
+
+This axis reorganizes the existing Task 4 material. The candidate is explicit about uneven confidence: the MongoDB reasoning is his own; the Neo4j model and Cypher are AI-composed from research he commissioned. That asymmetry is preserved below.
+
+> **Provenance key.** **<span style="background:#10363a;color:#5eead4;padding:2px 9px;border-radius:5px;font-size:.82em;letter-spacing:.04em">OWNED (Bùi Đức Trí)</span>** marks the candidate's own words, kept verbatim. **<span style="background:#2b2350;color:#c4b5fd;padding:2px 9px;border-radius:5px;font-size:.82em;letter-spacing:.04em">AI-GENERATED</span>** marks AI-assisted content. This mirrors the journal's own human / `<ai>` split.
+
+## TL;DR
+
+**<span style="background:#10363a;color:#5eead4;padding:2px 9px;border-radius:5px;font-size:.82em;letter-spacing:.04em">OWNED (Bùi Đức Trí)</span>** *verbatim, journal section 5*
+
+"the core idea is the same one I keep coming back to: the best tool for the job, chosen by the property of the workload, not by trend. ... MongoDB I know from production, so the MongoDB reasoning below is mine. Neo4j I do not have production experience with, and I lack some of the graph-theory grounding, so I commissioned research first and then had the AI compose the graph model and the Cypher from it. ... the MongoDB half is mostly my own thought, the Neo4j model and queries are AI-composed from the research I asked for."
+
+---
+
+## Key Findings
+
+**<span style="background:#10363a;color:#5eead4;padding:2px 9px;border-radius:5px;font-size:.82em;letter-spacing:.04em">OWNED (Bùi Đức Trí)</span>** *the candidate's own words, verbatim quotes from journal section 5.1 and 5.2*
+
+- "it must record the events that the business transaction *rolls back* (a denied transfer, an insufficient-funds attempt). A row written inside that transaction dies with the rollback ... That forces Layer 3 out-of-band, and an append-only document store is the natural home."
+- "the audit stream is schema-volatile (each event type is a different shape) and it has to be immutable."
+- "prove this is *genuinely* a graph problem and not Neo4j-by-trend, because that is literally the rubric ("right tool for the job, with clear justification")."
+- "PostgreSQL stays the system of record; the graph is a downstream, rebuildable, derived store, never the financial source of truth."
+
+**<span style="background:#2b2350;color:#c4b5fd;padding:2px 9px;border-radius:5px;font-size:.82em;letter-spacing:.04em">AI-GENERATED</span>** *the deliverables: `docs/audit-l3-mongodb.md`, `src/mongo/create_activity_audit.js`, and the Neo4j model/Cypher*
+
+- The full "why MongoDB over a Postgres JSONB column" answer adds workload isolation, independent retention lifecycle, and the honest boundary where JSONB wins.
+- The L3 event document, three correlation IDs, and the three collection-type options (capped huge / time-series / regular+TTL), with the choice deferred.
+- The fraud-ring graph model and two Cypher queries (cycle detection, WCC community detection).
+
+---
+
+## Detailed Analysis: MongoDB (the candidate's own reasoning)
+
+### Why MongoDB, and the Layer 3 audit use case
+
+**<span style="background:#10363a;color:#5eead4;padding:2px 9px;border-radius:5px;font-size:.82em;letter-spacing:.04em">OWNED (Bùi Đức Trí)</span>** *verbatim, journal section 5.1*
+
+For MongoDB, its strongest points are the dynamic schema approach and document-centric design. With its self-developed physical data representation, BSON, MongoDB makes good use of document storage and the aggregation framework. One other strong point that most people miss is that MongoDB has a built-in HA solution (replica sets), which most RDBMSs lack, so the choice is not only about the data modelling aspect; some administrative considerations come with it too, but that is outside this task so I will not push on it here.
+
+Most people reach for MongoDB to store logs, and that is understandable: logs are very schema-volatile, so the flexible schema is best used there. The angle that matters more for a payments platform is auditing. Compliance usually requires the underlying audit data to be immutable, and MongoDB has capped collections that forbid all updates on the collection. Even the root account cannot modify the data without dropping and repopulating it, so storing audit data in MongoDB carries that tamper-evidence advantage on top of the schema fit. The latest MongoDB also has time-series collections and clustered collections, so if the data wants those access patterns (high-frequency timestamped events), that is another reason to consider it.
+
+This is exactly why I put the **Layer 3 activity audit** in MongoDB, and it is the use case I choose for this task (the requirement offered raw webhook capture or an append-only audit log as examples; I take the audit log, since we have already worked through it in Task 1). The three-layer audit was settled in the core design: Layer 1 is the immutable ledger entries (their own audit), Layer 2 is the in-Postgres `audit_log` for committed non-ledger state changes, and Layer 3 is the append-only activity stream of attempts, denials, replays, and access. Layer 3 is the one that does not belong in Postgres, and the reason is sharp: it must record the events that the business transaction *rolls back* (a denied transfer, an insufficient-funds attempt). A row written inside that transaction dies with the rollback, so the record of the attempt would vanish exactly when AML and fraud review need it. That forces Layer 3 out-of-band, and an append-only document store is the natural home.
+
+So my own reason for putting Layer 3 in MongoDB rather than a Postgres JSONB column comes down to the two properties I already trust it for: the audit stream is schema-volatile (each event type is a different shape) and it has to be immutable. The fuller, structured "why over JSONB" answer (the explicit ask) and the honest boundary where JSONB is actually the better call are in the AI block below, because that side-by-side comparison came out of the research, not my own prior reasoning, and I would rather mark it than pass it off as mine.
+
+### The full "why over JSONB" answer
+
+**<span style="background:#2b2350;color:#c4b5fd;padding:2px 9px;border-radius:5px;font-size:.82em;letter-spacing:.04em">AI-GENERATED</span>** *verbatim, the `<ai>` block in journal section 5.1; full deliverable in `docs/audit-l3-mongodb.md`*
+
+**The deliverable that already exists:** [`docs/audit-l3-mongodb.md`](sources/04-polyglot-modelling/audit-l3-mongodb.md) (AI-drafted, realizing the author's plan). It carries the three-layer table, the event-document schema (one `activity_audit` collection, one document per event), worked examples that prove L3 survives a rollback that empties L1/L2, and the three correlation IDs (`request_id`, `idempotency_key`, `operation_id`) that thread an activity event back to the ledger.
+
+Beyond the author's own two points (schema volatility, immutability), the research adds two more and a boundary:
+
+- **Workload isolation.** L3 is append-heavy and high-volume (every request, every denial, every access). Co-locating it as a JSONB column inside the ledger's OLTP database makes it compete for the ledger's I/O and buffer cache; a separate store keeps that write traffic off the hot path.
+- **Independent retention lifecycle.** AML retention is often multi-year, while the ledger's hot data is partitioned and pruned on a different schedule. Separate stores let each follow its own retention and archival policy.
+- **The honest boundary (when JSONB wins).** Low volume, a stable shape, and a need to join the audit row to ledger rows in one transaction. Layer 3 is none of those, so this is a genuine right-tool split, not Mongo-by-default.
+
+The file also records the reframing that de-risks the in-DB choice: the compliance system of record is really a WORM archive fed by an out-of-band stream (Kafka/SIEM), and this collection is the *queryable projection* of that stream, so the A/B/C collection-type choice is about query and throughput ergonomics, not the ultimate guarantee.
+
+> **Human direction / feedback (Bùi Đức Trí):** Keep exploring the capped-collection approach by sizing it extremely large, and check whether the oplog's minimum-retention-time idea applies here. Outcome (verified against the MongoDB manual): the huge + resizable sizing is viable and mitigates overwrite, but `oplogMinRetentionHours` is oplog-only, so a user capped collection has no built-in time floor. So the collection-type decision (A: capped huge + resizable; B: time-series + insert/find-only role; C: regular + role + TTL) stays **deferred**, to settle once the event volume, sharding need, and the compliance retention period are known. All three are written into the file; capped is the leading option because engine-enforced immutability (not even an admin can rewrite history) is the property compliance likes most.
+
+### The runnable create-collection script
+
+**<span style="background:#2b2350;color:#c4b5fd;padding:2px 9px;border-radius:5px;font-size:.82em;letter-spacing:.04em">AI-GENERATED</span>** *verbatim, the `<ai>` block in journal section 5.1; deliverable `src/mongo/create_activity_audit.js`*
+
+`src/mongo/create_activity_audit.js`, runnable in `mongosh`. It is a consolidation of the commands already in the L3 doc into one re-runnable file: it creates the capped `audit.activity_audit` collection (option A, the leading choice, with the time-series and regular+TTL shapes kept as commented alternatives), the insert/find-only `auditAppender` role (least privilege), and the three access-pattern indexes (`{idempotency_key, ts}`, `{meta.caller_id, ts}`, sparse `{operation_id}`). The script is idempotent and carries the oplog-min-retention finding as a header comment. Syntax validated with `node --check`.
+
+## Detailed Analysis: Neo4j (AI-composed from commissioned research)
+
+### The candidate's framing
+
+**<span style="background:#10363a;color:#5eead4;padding:2px 9px;border-radius:5px;font-size:.82em;letter-spacing:.04em">OWNED (Bùi Đức Trí)</span>** *verbatim, journal section 5.2*
+
+For Neo4j, the best use is, of course, graph problems such as relationship mapping or fraud detection. I lack some basic knowledge about real-world graph problems, so I ran research for this part (`0-research/neo4j-graph-fintech/` for the fintech application and `0-research/graph-problem-patterns/` for the domain-agnostic "what even is a graph problem" grounding). The one thing I insisted on before accepting any model: prove this is *genuinely* a graph problem and not Neo4j-by-trend, because that is literally the rubric ("right tool for the job, with clear justification"). And the same boundary as everywhere else in this design holds: PostgreSQL stays the system of record; the graph is a downstream, rebuildable, derived store, never the financial source of truth. Past that point, the model and the Cypher are AI-composed from the research, so I have put them in an AI block rather than claim them as my own reasoning.
+
+### The graph model and Cypher
+
+**<span style="background:#2b2350;color:#c4b5fd;padding:2px 9px;border-radius:5px;font-size:.82em;letter-spacing:.04em">AI-GENERATED</span>** *verbatim, the `<ai>` block in journal section 5.2*
+
+**Is it genuinely a graph problem (the litmus the author asked for).** The sharpest single test from the pattern research: if you remove most of the edges and the application still works, it is not a graph problem; if the edges *are* the application, it is. A fraud ring passes hard: one transaction at a time looks benign, and the fraud exists *only* in the connection structure (A pays B pays C pays A). Two more tells also fire: the query follows a **variable, unknown number of hops**, and the answer is **structural** (a cycle, a cluster) rather than a row. In relational terms each hop is a self-join, so an N-hop ring is an N-way recursive join whose cost explodes; a graph database uses index-free adjacency, so each hop is a pointer traversal that stays cheap.
+
+**The property-graph model.** A derived projection fed from the Postgres ledger and the KYC/PII side:
+
+```
+(:Account {id, name, risk_score})
+(:Card    {fingerprint})
+(:Device  {id})
+
+(:Account)-[:TRANSFERRED {amount, currency, at, txn_id}]->(:Account)   // derived from the ledger
+(:Account)-[:REFERRED]->(:Account)                                     // referral network
+(:Account)-[:USED]->(:Card)                                            // shared-PII link
+(:Account)-[:LOGGED_IN_FROM]->(:Device)
+```
+
+**Tie-back to our schema (why this is not a foreign model).** Neo4j's canonical fraud-ring model reifies each money movement as a `Transaction` node sitting *between* two accounts. That is literally the model we already built in Task 1: a `transaction` header with two balancing `entry` lines against wallets. So the graph is a projection of the ledger, not a new design.
+
+**Cypher 1 - fraud ring (cycle detection).** Money that flows in a cycle back to its origin inside a window, each hop within 20% of the previous amount (the layering fee a mule skims):
+
+```cypher
+MATCH path = (a:Account)-[:TRANSFERRED*2..6]->(a)
+WHERE all(r IN relationships(path) WHERE r.at >= datetime('2026-06-01T00:00:00Z'))
+  AND all(i IN range(0, size(relationships(path)) - 2)
+          WHERE relationships(path)[i+1].amount >= 0.80 * relationships(path)[i].amount)
+WITH a,
+     [n IN nodes(path) | n.id] AS ring,
+     reduce(total = 0.0, r IN relationships(path) | total + r.amount) AS cycle_volume
+RETURN a.id AS ring_seed, ring AS accounts_in_ring, cycle_volume
+ORDER BY cycle_volume DESC
+LIMIT 50;
+```
+
+The variable-length pattern `[:TRANSFERRED*2..6]->(a)` returning to the same node *is* the cycle test; in SQL it would be a recursive CTE with cycle guards, far harder to read and tune.
+
+**Cypher 2 - referral network (community detection with WCC, via GDS).** Cluster accounts into referral communities, the reachable-set answer:
+
+```cypher
+CALL gds.graph.project('refs', 'Account', 'REFERRED');
+
+CALL gds.wcc.stream('refs')
+YIELD nodeId, componentId
+RETURN componentId,
+       count(*) AS cluster_size,
+       collect(gds.util.asNode(nodeId).id)[..10] AS sample_accounts
+ORDER BY cluster_size DESC
+LIMIT 20;
+```
+
+**When NOT to use it (the honest negative).** A single-hop lookup ("this account's transactions") is a B-tree index answer, not a graph problem, and aggregations belong in Postgres or a columnar store. That is precisely why the ledger stays relational and Neo4j is only the derived traversal store.
+
+> **Human direction (Bùi Đức Trí):** Keep the system of record (wallets, ledger) in PostgreSQL. Neo4j and MongoDB are downstream, derived stores fed from events, rebuildable from the ledger, never the financial source of truth. This is the same principle as the derived `wallet.balance`: the source of truth is the relational ledger, and everything else is a projection off it.
+
+## Open Questions
+
+*Status, summarized from journal section 5 and the report README.*
+
+- The MongoDB collection-type decision (capped huge / time-series / regular+TTL) is deferred until event volume, sharding need, and the compliance retention period are known. All three shapes are written into `docs/audit-l3-mongodb.md`.
+- The Neo4j half was the in-progress piece at the time of the report; the model and Cypher above are the AI-composed deliverable from the commissioned research.
+
+## Sources
+
+[1] Design journal, section 5 (MongoDB reasoning owned; Neo4j model AI-composed), verbatim - (local: sources/journal/00-journal.md)
+[2] Layer 3 activity audit, MongoDB design, AI-drafted - (local: sources/04-polyglot-modelling/audit-l3-mongodb.md)
+[3] Runnable create-collection script - `src/mongo/create_activity_audit.js` (repo)
+
+</script>
+<script type="text/markdown" id="md-doc-05">
+# Task 5: Observability
+
+> Generated: 2026-06-25 | Axis: Observability (Grafana dashboard + alerts) | Primary sources: journal section 1.2 and 6, `docs/observability.md`
+
+This axis reorganizes the existing Task 5 material. The candidate's own reasoning is his first-impression observability note (section 1.2) and the T10 plan to turn balance reconciliation into an alert; the dashboard, SLOs, and alert table are the AI expansion of that, marked accordingly.
+
+> **Provenance key.** **<span style="background:#10363a;color:#5eead4;padding:2px 9px;border-radius:5px;font-size:.82em;letter-spacing:.04em">OWNED (Bùi Đức Trí)</span>** marks the candidate's own words, kept verbatim. **<span style="background:#2b2350;color:#c4b5fd;padding:2px 9px;border-radius:5px;font-size:.82em;letter-spacing:.04em">AI-GENERATED</span>** marks AI-assisted content. This mirrors the journal's own human / `<ai>` split.
+
+## TL;DR
+
+**<span style="background:#10363a;color:#5eead4;padding:2px 9px;border-radius:5px;font-size:.82em;letter-spacing:.04em">OWNED (Bùi Đức Trí)</span>** *verbatim, journal section 1.2 and 6*
+
+"For the monitoring aspect, we must approach it from 2 aspects: technical and business." "My own observability reasoning is the first-impression note in Section 1.2 ... plus the T10 plan to build the balance reconciliation into alerting. This Section 6 is **AI-composed**: I had the AI expand that earlier reasoning into the dashboard, SLOs, and alert table". "I am very familiar with Grafana and the monitoring philosophy carries over from my SQL Server time".
+
+---
+
+## Key Findings
+
+**<span style="background:#10363a;color:#5eead4;padding:2px 9px;border-radius:5px;font-size:.82em;letter-spacing:.04em">OWNED (Bùi Đức Trí)</span>** *the candidate's own words, verbatim quotes from journal section 1.2 and 6*
+
+- "we start with basic metrics for all DBMSs: CPU, memory, I/O, internal logs (for PostgreSQL: WAL logs), locking/waiting, connections, cache hits/misses, and index utilization. Then focus on PostgreSQL-specific metrics: vacuum, dead tuples, and transaction IDs."
+- "For the business side, we need to monitor query and procedure duration, especially around core business flows."
+- "plus the T10 plan to build the balance reconciliation into alerting." (the underlying reconciliation rule was the AI-added T10 integrity rule from Task 1.)
+
+**<span style="background:#2b2350;color:#c4b5fd;padding:2px 9px;border-radius:5px;font-size:.82em;letter-spacing:.04em">AI-GENERATED</span>** *the expansion, full deliverable in `docs/observability.md`*
+
+- A two-layer dashboard (integrity over technical): the `balance_audit_drift` view as the headline integrity alert, plus a system-wide per-currency zero-sum cross-check.
+- Settlement lag read off the `PENDING -> SETTLED` state machine; design-specific signals (partition runway, replication-slot retained WAL, XID wraparound).
+- Integrity kept as a hard invariant (drift must be 0), not a percentile SLO; thresholds are starting points pending a baseline.
+
+---
+
+## Detailed Analysis
+
+### The candidate's first-impression observability note
+
+**<span style="background:#10363a;color:#5eead4;padding:2px 9px;border-radius:5px;font-size:.82em;letter-spacing:.04em">OWNED (Bùi Đức Trí)</span>** *verbatim, journal section 1.2 "Observability"*
+
+For the monitoring aspect, we must approach it from 2 aspects: technical and business.
+
+For the technical side, all basic metrics related to PostgreSQL and its performance need to be captured. So we start with basic metrics for all DBMSs: CPU, memory, I/O, internal logs (for PostgreSQL: WAL logs), locking/waiting, connections, cache hits/misses, and index utilization. Then focus on PostgreSQL-specific metrics: vacuum, dead tuples, and transaction IDs.
+
+For the business side, we need to monitor query and procedure duration, especially around core business flows. But for this aspect, we don't have much context, so this needs more thought later.
+
+### How the candidate frames the split for this task
+
+**<span style="background:#10363a;color:#5eead4;padding:2px 9px;border-radius:5px;font-size:.82em;letter-spacing:.04em">OWNED (Bùi Đức Trí)</span>** *verbatim, journal section 6*
+
+My own observability reasoning is the first-impression note in Section 1.2 (the technical-vs-business split, and the metric list: CPU, memory, I/O, WAL, locking/waiting, connections, cache hits/misses, index utilization, then the PG-specific vacuum, dead tuples, and transaction IDs), plus the T10 plan to build the balance reconciliation into alerting. This Section 6 is **AI-composed**: I had the AI expand that earlier reasoning into the dashboard, SLOs, and alert table, both here and in the deliverable doc. Same separation as Task 2: my thinking is the earlier reasoning, the extracted write-up is the AI's.
+
+### The AI expansion: dashboard, SLOs, alerts
+
+**<span style="background:#2b2350;color:#c4b5fd;padding:2px 9px;border-radius:5px;font-size:.82em;letter-spacing:.04em">AI-GENERATED</span>** *verbatim, the `<ai>` block in journal section 6; full deliverable in `docs/observability.md`*
+
+This section realizes the author's Section 1.2 observability note and the T10 reconciliation plan.
+
+- **Two-layer framing (from Section 1.2): business / integrity over technical.** For a payments ledger "is the ledger correct?" outranks "is the box healthy?", so the integrity layer sits on top. The integrity metrics need no new instrumentation; they read guarantees the schema already exposes. The headline is the author's **T10 reconciliation rule**: `balance_audit_drift` is already a view in the DDL, so the most important alert in the system (cached balance drifted from `SUM(entries)`) is a row count off that view. Paired with a system-wide per-currency zero-sum cross-check.
+
+- **Settlement lag mapped onto the design's state machine.** A transaction is born `PENDING` and flips to `SETTLED`, so settlement lag is the age of the oldest still-`PENDING` row and the pending backlog size, both queryable off `transactions.status` + `created_at`. This is a business outage the engine cannot see: the database can look healthy while customer money is stuck in flight.
+
+- **Design-specific "why" entries**: the monthly **partition runway** (next month's `entries` partition must exist, and the DEFAULT partition must stay empty), the **replication-slot retained WAL** footgun (a stalled slot pins WAL until the primary's disk fills and writes stop), and **transaction-ID wraparound**. The lock / long-transaction row is also the live signal to watch during a Task 3 expand-contract migration window.
+
+- **Thresholds and the hard-invariant distinction.** Numbers are starting points: a threshold picked before real traffic is a guess, so the durable content of each alert is the **consequence** in the "why" column, not the digit. Integrity is kept as a **hard invariant** (drift must be 0, per-currency sum must be 0), not a percentile SLO with an error budget; "99.9% of balances reconcile" is the wrong sentence for a ledger.
+
+- **Derived stores.** MongoDB and Neo4j get one signal each (replica-set health, projection staleness). They are rebuildable from the ledger, so they never page the way the system of record does.
+
+Deliverable: [`docs/observability.md`](sources/05-observability/observability.md), the dashboard layout, the SLI/SLO list with the reasoning per metric, and the consolidated alert table (threshold, page-vs-ticket severity, and the consequence behind each), marked AI-composed at its head.
+
+### Selected alert thresholds (from the deliverable)
+
+**<span style="background:#2b2350;color:#c4b5fd;padding:2px 9px;border-radius:5px;font-size:.82em;letter-spacing:.04em">AI-GENERATED</span>** *excerpt from `docs/observability.md`; thresholds are starting points pending a baseline*
+
+| Signal | Threshold (starting point) | Severity | Why (the consequence) |
+|---|---|---|---|
+| `balance_audit_drift` rows | any > 0 | PAGE | Cached balance no longer matches the ledger. Correctness incident, money shown wrong. |
+| System-wide per-currency sum of entries | any != 0 | PAGE | The double-entry invariant itself is broken. |
+| Oldest `PENDING` transaction age | > 15 min, climbing | PAGE | Settlement pipeline stalled; customer funds stuck in flight. |
+| Next-month `entries` partition missing | absent within N days of month end | PAGE | Next month's inserts will fail or misroute. |
+| Replication-slot retained WAL / `pg_wal` free | retained WAL high, or `pg_wal` free < 20% | PAGE | Stalled slot pins WAL, primary disk fills, full write outage. |
+| Wraparound age `age(datfrozenxid)` | beyond a safe ceiling well below 2^31 | PAGE | Autovacuum behind on freezing; risk of a forced read-only shutdown. |
+
+> **Human direction (Bùi Đức Trí):** My own reasoning for this task is the Section 1.2 observability note and the T10 plan to turn balance reconciliation into an alert; treat this Section 6 and `docs/observability.md` as the AI expansion of that, marked accordingly. I am very familiar with Grafana and the monitoring philosophy carries over from my SQL Server time; the PostgreSQL-specific metric names and catalog views are named by intent and source, not asserted from memory, the same honesty I held in every PG section.
+
+## Open Questions
+
+*Deferred item, from journal section 1.2. The candidate's verbatim is quoted.*
+
+- The business side needs more context: "we don't have much context, so this needs more thought later." Concrete thresholds are starting points to be tuned once Prometheus has a week or two of real-traffic history.
+
+## Sources
+
+[1] Design journal, section 1.2 (observability note) and 6, verbatim - (local: sources/journal/00-journal.md)
+[2] Task 5 observability deliverable: dashboard, SLIs/SLOs, alert table, AI-composed - (local: sources/05-observability/observability.md)
+
+</script>
+<script type="text/markdown" id="md-doc-06">
+# Task 6: Design write-up (ADR)
+
+> Generated: 2026-06-25 | Axis: Architecture Decision Records | Primary sources: journal section 1.2 and 2.3, `docs/adr/`, `CONTEXT.md`
+
+This axis reorganizes the existing Task 6 material: the candidate's ADR set (authored in his own voice, with AI-surfaced facts noted per ADR), and the AI consistency audit that checked the extracted docs against the committed schema before commit.
+
+> **Provenance key.** **<span style="background:#10363a;color:#5eead4;padding:2px 9px;border-radius:5px;font-size:.82em;letter-spacing:.04em">OWNED (Bùi Đức Trí)</span>** marks the candidate's own words, kept verbatim. **<span style="background:#2b2350;color:#c4b5fd;padding:2px 9px;border-radius:5px;font-size:.82em;letter-spacing:.04em">AI-GENERATED</span>** marks AI-assisted content. This mirrors the journal's own human / `<ai>` split.
+
+## TL;DR
+
+**<span style="background:#10363a;color:#5eead4;padding:2px 9px;border-radius:5px;font-size:.82em;letter-spacing:.04em">OWNED (Bùi Đức Trí)</span>** *verbatim, journal section 1.2 and the ADR README*
+
+"Our analysis can cover most of the ADR here, but the task requires some more thought about standards and the microservices aspect, so I need to cover them too." The ADRs "are authored in my own voice as the candidate (Bùi Đức Trí). Where AI-assisted research surfaced a fact, a gap, or a technique, the "Provenance" section of that ADR says so, so my own reasoning stays separable from the AI's contribution." The three forward-looking decisions are framed as Proposed placeholders: "None is decided."
+
+---
+
+## Key Findings
+
+**<span style="background:#10363a;color:#5eead4;padding:2px 9px;border-radius:5px;font-size:.82em;letter-spacing:.04em">OWNED (Bùi Đức Trí)</span>** *the accepted decisions, `docs/adr/`*
+
+- **0001** Double-entry ledger is the source of truth; wallet balance is derived.
+- **0002** Zero-sum enforced per currency, by a deferred constraint trigger.
+- **0003** Entry amount is a positive magnitude with direction in `type` (standards choice).
+- **0004** Cross-currency transfers use currency-pure wallets and house FX wallets.
+- **0005** Entry/wallet currency consistency by composite foreign key.
+- **0006** Idempotency scoped to `(caller_id, key)` on a single-atomic-posting assumption.
+- **0007** Three-layer audit; Layer 2 in Postgres, Layer 3 in MongoDB; no trigger audit.
+
+**<span style="background:#10363a;color:#5eead4;padding:2px 9px;border-radius:5px;font-size:.82em;letter-spacing:.04em">OWNED (Bùi Đức Trí)</span>** *the open decisions the assessment Task 6 calls for, framed as Proposed*
+
+- **0008** Strong vs eventual consistency across microservices.
+- **0009** Data contracts between services (ownership, transport, versioning).
+- **0010** TEXT + CHECK vs native ENUM for status/type columns (DDL standard).
+
+---
+
+## Detailed Analysis
+
+### The candidate's design write-up note and authorship model
+
+**<span style="background:#10363a;color:#5eead4;padding:2px 9px;border-radius:5px;font-size:.82em;letter-spacing:.04em">OWNED (Bùi Đức Trí)</span>** *verbatim, journal section 1.2 and the ADR README intro*
+
+(journal 1.2) Our analysis can cover most of the ADR here, but the task requires some more thought about standards and the microservices aspect, so I need to cover them too.
+
+(`docs/adr/README.md`) Decisions for the VietPay core payments ledger, extracted from the design journal (`../../00-journal.md`) and the audited model (`../ERD.md`). Each record is one decision. These are authored in my own voice as the candidate (Bùi Đức Trí). Where AI-assisted research surfaced a fact, a gap, or a technique, the "Provenance" section of that ADR says so, so my own reasoning stays separable from the AI's contribution.
+
+### Example of the per-ADR provenance line (ADR 0001)
+
+**<span style="background:#10363a;color:#5eead4;padding:2px 9px;border-radius:5px;font-size:.82em;letter-spacing:.04em">OWNED (Bùi Đức Trí)</span>** *verbatim, `docs/adr/0001` Provenance section*
+
+> The split and the "balance is never the source of truth" stance are mine, carried over from prior work on a customer-asset and balance-monitoring system. AI research on double-entry ledgers (`0-research/double-entry-ledger`) confirmed the terminology and the reconciliation pattern.
+
+The full set of accepted ADRs (0001 to 0007) and the Proposed placeholders (0008 to 0010) are in [`docs/adr/`](sources/06-design-write-up-adr/adr-index.md), each carrying its own Context, Decision, Consequences, and Provenance.
+
+### The consistency audit before commit
+
+The standing design documents (the `CONTEXT.md` glossary and invariants, the Task 6 ADRs, and the report `README.md`) restate decisions already reasoned through. Before committing them the candidate had the model cross-check that they describe the schema as actually built, not as remembered.
+
+**<span style="background:#10363a;color:#5eead4;padding:2px 9px;border-radius:5px;font-size:.82em;letter-spacing:.04em">OWNED (Bùi Đức Trí)</span>** *verbatim, journal section 2.3*
+
+The standing design documents (the `CONTEXT.md` glossary and invariants, the Task 6 ADRs under `docs/adr/`, and a report `README.md`) restate decisions already reasoned through above. Before committing them I wanted to confirm they describe the schema as actually built, not as I remembered it. Extracted docs regress fast, so this pass guards against the restatement drifting away from the DDL. I had the model run the cross-check explicitly.
+
+---
+
+**<span style="background:#2b2350;color:#c4b5fd;padding:2px 9px;border-radius:5px;font-size:.82em;letter-spacing:.04em">AI-GENERATED</span>** *verbatim, the `<ai>` block in journal section 2.3*
+
+Rescanned every concrete claim in `CONTEXT.md` and the ten ADRs against the committed schema (`src/ddl/`), the smoke test, and `docs/ERD.md`:
+
+- The seven accepted ADRs (0001-0007) match the DDL: the transaction/entry split with a derived balance, the per-currency `DEFERRABLE INITIALLY DEFERRED` zero-sum trigger, positive-amount with direction in `type`, currency-pure plus house-FX wallets, the composite-FK currency consistency, `UNIQUE (caller_id, key)` idempotency, and the three-layer audit with a polymorphic `audit_logs`.
+- CONTEXT's domain terms, key invariants, the `{PENDING, SETTLED, REVERSED}` status machine, and the money/id types all match.
+- ADR 0002's and the README's claims about the smoke test were checked against `test/smoke_test.sql` directly.
+
+Two drifts were found and fixed in the same commit:
+
+- **ADR 0010** listed `transaction.type` among the `TEXT + CHECK` columns. In the DDL `transaction.type` is deliberately open `TEXT` with no `CHECK` (its vocabulary is spec-dependent). Corrected the ADR to name it as the exception.
+- **`06_transaction.up.sql`** carried a comment saying `CONTEXT.md` "sketches a fuller PROCESSING/FAILED machine". CONTEXT had since been rewritten to record those states as dropped, so the comment was stale. Made it self-contained.
+
+> **Human direction (Bùi Đức Trí):** Audit the extracted ADRs and CONTEXT against the current project before committing, and only commit if they are consistent. The extracted docs exist to be a faithful restatement of the design as built, so a claim that no longer matches the schema (like the `transaction.type` CHECK) is exactly what this pass is meant to catch. One open item to settle later: the ADR "Provenance" lines point at `0-research/` and `../1-assessment/`, which sit in the parent workspace, outside this report repo. They resolve across the whole workspace but would dangle if the report ever ships on its own; whether to inline them is a packaging decision I will make then.
+
+## Open Questions
+
+*The Proposed ADRs, from `docs/adr/README.md` (verbatim).*
+
+These decisions the assessment (Task 6) calls for are not yet made; the journal flags them as needing more thought. Each has a placeholder ADR (Status: Proposed) that frames the open question and the trade-offs. **None is decided.**
+
+- **0008** Strong vs eventual consistency across microservices.
+- **0009** Data contracts between services (ownership, transport, versioning).
+- **0010** TEXT + CHECK vs native ENUM for status/type columns.
+
+## Sources
+
+[1] Design journal, section 1.2 and 2.3 (candidate's reasoning + AI consistency audit), verbatim - (local: sources/journal/00-journal.md)
+[2] ADR index (authored in the candidate's voice, with per-ADR Provenance) - (local: sources/06-design-write-up-adr/adr-index.md)
+[3] Accepted ADRs 0001-0007 and Proposed 0008-0010 - (local: sources/06-design-write-up-adr/0001-double-entry-ledger-source-of-truth.md)
+[4] Domain glossary, invariants, flagged-ambiguities resolutions - (local: sources/journal/CONTEXT.md)
+
+</script>
+
+
+<script src="assets/vendor/marked.min.js"></script>
+<script src="assets/vendor/mermaid.min.js"></script>
+<script src="assets/vendor/chart.umd.min.js"></script>
+<script src="assets/contract.js"></script>
+<script>window.__MANIFEST__=[{"id":"doc-00","code":"00","file":"00-introduction.md","title":"Introduction: candidate, method, and authorship model"},{"id":"doc-01","code":"01","file":"01-relational-core-model.md","title":"Task 1: Relational core model"},{"id":"doc-02","code":"02","file":"02-query-and-performance.md","title":"Task 2: Query and Performance: the settlement report"},{"id":"doc-03","code":"03","file":"03-zero-downtime-migration.md","title":"Task 3: Zero-downtime migration"},{"id":"doc-04","code":"04","file":"04-polyglot-modelling.md","title":"Task 4: Polyglot modelling"},{"id":"doc-05","code":"05","file":"05-observability.md","title":"Task 5: Observability"},{"id":"doc-06","code":"06","file":"06-design-write-up-adr.md","title":"Task 6: Design write-up (ADR)"}];</script>
+<script src="assets/content.js"></script>
+<script src="assets/engine.js"></script>
+</body>
+</html>
