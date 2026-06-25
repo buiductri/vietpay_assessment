@@ -1018,3 +1018,59 @@ store: we move to the graph exactly for the variable-depth, structural questions
 > Neo4j and MongoDB are downstream, derived stores fed from events, rebuildable from the ledger,
 > never the financial source of truth. This is the same principle as the derived `wallet.balance`:
 > the source of truth is the relational ledger, and everything else is a projection off it.
+
+## 6. Observability
+
+My own observability reasoning is the first-impression note in Section 1.2 (the technical-vs-business
+split, and the metric list: CPU, memory, I/O, WAL, locking/waiting, connections, cache hits/misses,
+index utilization, then the PG-specific vacuum, dead tuples, and transaction IDs), plus the T10 plan
+to build the balance reconciliation into alerting. This Section 6 is **AI-composed**: I had the AI
+expand that earlier reasoning into the dashboard, SLOs, and alert table, both here and in the
+deliverable doc. Same separation as Task 2: my thinking is the earlier reasoning, the extracted
+write-up is the AI's.
+
+<ai>
+This section realizes the author's Section 1.2 observability note and the T10 reconciliation plan.
+
+- **Two-layer framing (from Section 1.2): business / integrity over technical.** For a payments
+  ledger "is the ledger correct?" outranks "is the box healthy?", so the integrity layer sits on
+  top. The integrity metrics need no new instrumentation; they read guarantees the schema already
+  exposes. The headline is the author's **T10 reconciliation rule**: `balance_audit_drift` is
+  already a view in the DDL, so the most important alert in the system (cached balance drifted from
+  `SUM(entries)`) is a row count off that view. Paired with a system-wide per-currency zero-sum
+  cross-check.
+
+- **Settlement lag mapped onto the design's state machine.** A transaction is born `PENDING` and
+  flips to `SETTLED`, so settlement lag is the age of the oldest still-`PENDING` row and the pending
+  backlog size, both queryable off `transactions.status` + `created_at`. This is a business outage
+  the engine cannot see: the database can look healthy while customer money is stuck in flight.
+
+- **Design-specific "why" entries** (what makes the dashboard specific to this system rather than
+  generic DBA metrics): the monthly **partition runway** (next month's `entries` partition must
+  exist, and the DEFAULT partition must stay empty, both from Task 2), the **replication-slot
+  retained WAL** footgun (a stalled slot pins WAL until the primary's disk fills and writes stop),
+  and **transaction-ID wraparound**. The lock / long-transaction row is also the live signal to
+  watch during a Task 3 expand-contract migration window.
+
+- **Thresholds and the hard-invariant distinction.** Numbers are starting points: a threshold
+  picked before real traffic is a guess, so the durable content of each alert is the **consequence**
+  in the "why" column, not the digit, to be tightened once Prometheus has a week or two of history.
+  Integrity is kept as a **hard invariant** (drift must be 0, per-currency sum must be 0), not a
+  percentile SLO with an error budget; "99.9% of balances reconcile" is the wrong sentence for a
+  ledger.
+
+- **Derived stores.** MongoDB and Neo4j get one signal each (replica-set health, projection
+  staleness). They are rebuildable from the ledger, so they never page the way the system of record
+  does.
+
+Deliverable: [`docs/observability.md`](./docs/observability.md), the dashboard layout, the SLI/SLO
+list with the reasoning per metric, and the consolidated alert table (threshold, page-vs-ticket
+severity, and the consequence behind each), marked AI-composed at its head.
+</ai>
+
+> **Human direction (Bùi Đức Trí):** My own reasoning for this task is the Section 1.2
+> observability note and the T10 plan to turn balance reconciliation into an alert; treat this
+> Section 6 and `docs/observability.md` as the AI expansion of that, marked accordingly. I am very
+> familiar with Grafana and the monitoring philosophy carries over from my SQL Server time; the
+> PostgreSQL-specific metric names and catalog views are named by intent and source, not asserted
+> from memory, the same honesty I held in every PG section.
