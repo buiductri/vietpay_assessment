@@ -481,3 +481,55 @@ still holds through the deny trigger meanwhile.
 > separate from later incremental deployment steps. A deployment-state table is
 > required so that an accidental redeploy cannot break anything. The scripts were
 > written first; PostgreSQL and a client were provided afterward to test them.
+
+### 2.3 ADRs, CONTEXT, and the consistency audit
+
+The standing design documents (the `CONTEXT.md` glossary and invariants, the Task 6 ADRs
+under `docs/adr/`, and a report `README.md`) restate decisions already reasoned through
+above. Before committing them I wanted to confirm they describe the schema as actually
+built, not as I remembered it. Extracted docs regress fast, so this pass guards against the
+restatement drifting away from the DDL. I had the model run the cross-check explicitly.
+
+<ai>
+**Consistency audit of the ADRs and CONTEXT against the committed project**
+
+Rescanned every concrete claim in `CONTEXT.md` and the ten ADRs against the committed
+schema (`src/ddl/`), the smoke test, and `docs/ERD.md`:
+
+- The seven accepted ADRs (0001-0007) match the DDL: the transaction/entry split with a
+  derived balance, the per-currency `DEFERRABLE INITIALLY DEFERRED` zero-sum trigger,
+  positive-amount with direction in `type`, currency-pure plus house-FX wallets, the
+  composite-FK currency consistency, `UNIQUE (caller_id, key)` idempotency, and the
+  three-layer audit with a polymorphic `audit_logs`.
+- CONTEXT's domain terms, key invariants, the `{PENDING, SETTLED, REVERSED}` status
+  machine, and the money/id types all match.
+- ADR 0002's and the README's claims about the smoke test were checked against
+  `test/smoke_test.sql` directly: the four-entry FX bridge is posted and asserted accepted
+  (POSITIVE 2), and the deferred trigger is forced with `SET CONSTRAINTS ALL IMMEDIATE` on
+  an unbalanced transaction (NEGATIVE A). Both hold.
+- Every cross-referenced path (the `0-research/...` provenance, ERD, journal, smoke test)
+  resolves on disk.
+
+Two drifts were found and fixed in the same commit:
+
+- **ADR 0010** listed `transaction.type` among the `TEXT + CHECK` columns. In the DDL
+  `transaction.type` is deliberately open `TEXT` with no `CHECK` (its vocabulary is
+  spec-dependent), as `src/ddl/README.md` already records. Corrected the ADR to name it as
+  the exception, which also ties into that ADR's own lookup-table open question.
+- **`06_transaction.up.sql`** carried a comment saying `CONTEXT.md` "sketches a fuller
+  PROCESSING/FAILED machine". CONTEXT had since been rewritten to record those states as
+  dropped, so the comment was stale. Made it self-contained (it now cites journal T4 and
+  states the three-state set directly), so it will not re-stale when CONTEXT changes.
+
+Committed the doc set (CONTEXT, the ADRs, README, and a `.gitignore` that keeps `.env.*`
+and the browser cache out) together with the two fixes.
+</ai>
+
+> **Human direction (Bùi Đức Trí):** Audit the extracted ADRs and CONTEXT against the
+> current project before committing, and only commit if they are consistent. The extracted
+> docs exist to be a faithful restatement of the design as built, so a claim that no longer
+> matches the schema (like the `transaction.type` CHECK) is exactly what this pass is meant
+> to catch. One open item to settle later: the ADR "Provenance" lines point at `0-research/`
+> and `../1-assessment/`, which sit in the parent workspace, outside this report repo. They
+> resolve across the whole workspace but would dangle if the report ever ships on its own;
+> whether to inline them is a packaging decision I will make then.
