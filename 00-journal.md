@@ -435,3 +435,49 @@ source: `0-research/double-entry-ledger/03-schema-design.md`
 > `transaction` is misleading (it reads as if it only relates to transactions), and drawing a line
 > to every entity makes the ERD messy. Detach it: show it as a standalone entity with no
 > relationship lines.
+
+### 2.2 DDL generation and deployment
+
+<ai>
+From the audited `docs/ERD.md` I generated the PostgreSQL DDL and packaged it as a
+one-time, rollbackable deployment under `src/ddl/`. The schema is the eight ERD
+entities (`currencies`, `exchange_rates`, `accounts`, `wallets`, `transactions`,
+`entries`, `idempotency_keys`, `audit_logs`) plus two reconciliation views, the
+per-currency zero-sum constraint trigger, the immutability triggers, and a
+least-privilege application role. Each guarantee is enforced by the schema, not by
+the application: per-currency zero-sum by a `DEFERRABLE INITIALLY DEFERRED`
+constraint trigger; currency consistency by the composite FK
+`entries (wallet_id, currency)` -> `wallets` against its `UNIQUE (wallet_id, currency)`
+target; idempotency by `UNIQUE (caller_id, key)`; immutability by `REVOKE` plus a
+deny trigger on `entries` and `audit_logs`; and the derived `wallets.balance`
+reconciled against `SUM(entries)` by the `balance_audit` view.
+
+Structure: `src/ddl/initial/` holds twelve ordered steps, each an `NN_name.up.sql`
+with a matching `.down.sql`; `deploy.sh` is a small psql runner (up, down, up-to,
+down-to, redo, status, verify, test, bundle); `test/smoke_test.sql` is an
+executable spec that posts a balanced transfer and the four-entry FX bridge, then
+asserts the unbalanced, duplicate, immutable, currency-mismatch, and non-positive
+cases are all rejected, and rolls back. Deployment state is tracked in a
+`schema_migrations` table keyed by `initial/NN` with an md5 checksum, so a re-run
+skips applied steps and refuses to re-apply a step whose file has changed.
+
+`entries` is the logical (unpartitioned) model; the monthly RANGE partitioning and
+its `(entry_id, created_at)` physical PK are deferred to Task 2, as the ERD's
+physical note frames them.
+
+The scripts were authored against PostgreSQL 14+, validated offline with the real
+PostgreSQL parser (pglast), then run live against a provided PostgreSQL 17.2. The
+full lifecycle up -> verify -> test -> down -> re-up passes, the checksum guard
+refuses a modified applied step, and the deferred per-currency check (forced with
+`SET CONSTRAINTS ALL IMMEDIATE`) rejects an unbalanced transaction as intended. The
+provided role is not a superuser and cannot `CREATE ROLE`, so role creation and the
+privilege `REVOKE`/`GRANT` degrade gracefully (skipped with a notice); immutability
+still holds through the deny trigger meanwhile.
+</ai>
+
+> **Human direction (Bùi Đức Trí):** Table names are plural (`accounts`, `entries`,
+> ...), while the ERD keeps the singular entity names; this is a naming standard, not
+> a correctness change. The one-time baseline lives in its own `initial/` folder, kept
+> separate from later incremental deployment steps. A deployment-state table is
+> required so that an accidental redeploy cannot break anything. The scripts were
+> written first; PostgreSQL and a client were provided afterward to test them.
